@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
+<head>
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Discovery Platform</title>
+
+  <!-- CRITICAL: Prevent Theme Glitch/Flash by applying theme immediately BEFORE render -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('user-app-theme') || 'twilight';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- External Theme CSS -->
+  <link rel="stylesheet" href="theme.css" />
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Supabase JS SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          },
+          keyframes: {
+            pulseFaint: {
+              '0%, 100%': { opacity: '0.9', transform: 'scale(1)' },
+              '50%': { opacity: '0.4', transform: 'scale(0.85)' },
+            }
+          },
+          animation: {
+            'pulse-faint': 'pulseFaint 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-950 font-sans antialiased flex flex-col items-center justify-start min-h-screen text-slate-100 overflow-hidden">
+
+  <!-- Desktop Outer Wrapper to retain mobile-first app structure on desktop/laptops -->
+  <div class="w-full max-w-[480px] h-[100dvh] sm:h-[92vh] sm:my-4 bg-slate-900 border-x border-slate-800/80 sm:rounded-[36px] shadow-2xl shadow-slate-950/50 overflow-hidden flex flex-col relative transition-all duration-300">
+
+    <!-- Header Section -->
+    <header class="relative z-45 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/60 px-4 h-16 shrink-0 flex items-center justify-between select-none overflow-hidden">
+      
+      <!-- DEFAULT HEADER CONTENT CONTAINER -->
+      <div id="defaultHeader" class="absolute inset-x-0 px-4 h-full flex items-center justify-between transition-opacity duration-200 opacity-100 z-10">
+        
+        <!-- Left: Logo Image (NO BORDER) -->
+        <div class="flex items-center">
+          <div class="relative group cursor-pointer" title="Logo">
+            <img 
+              src="logo.png" 
+              alt="Logo" 
+              class="w-10 h-10 object-cover rounded-full hover:scale-105 transition-transform duration-200" 
+              onerror="this.src='https://placehold.co/100/1e293b/ffffff?text=Logo'" 
+            />
+          </div>
+        </div>
+
+        <!-- Center: Navigation Tabs (Discover | For You) -->
+        <nav class="relative bg-slate-950/70 p-1 rounded-full border border-slate-800/80 flex items-center shadow-inner">
+          <div id="tabIndicator" class="absolute top-1 bottom-1 left-1 w-[82px] bg-slate-800 rounded-full transition-all duration-300 ease-out border border-slate-700/50"></div>
+          
+          <button id="tabDiscover" onclick="switchTab('discover')" class="relative z-10 px-4 py-1 text-xs font-semibold rounded-full text-white transition-colors duration-200 focus:outline-none">
+            Discover
+          </button>
+          <button id="tabForYou" onclick="switchTab('foryou')" class="relative z-10 px-4 py-1 text-xs font-semibold rounded-full text-slate-400 transition-colors duration-200 focus:outline-none">
+            For You
+          </button>
+        </nav>
+
+        <!-- Right: Search Icon Button -->
+        <button id="openSearchBtn" onclick="toggleSearch(true)" aria-label="Open Search" class="w-10 h-10 rounded-full bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-95 focus:outline-none">
+          <i class="fa-solid fa-magnifying-glass text-sm"></i>
+        </button>
+
+      </div>
+
+      <!-- EXPANDED SEARCH BAR HEADER STATE -->
+      <div id="expandedSearch" class="absolute inset-x-0 px-4 h-full bg-transparent flex items-center justify-between transition-opacity duration-200 opacity-0 pointer-events-none z-20">
+        <div class="relative flex-1 flex items-center h-10">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-xs pointer-events-none z-10"></i>
+          <input 
+            type="text" 
+            id="searchInput"
+            placeholder="Search @handle or LGA location..." 
+            oninput="handleSearch(this.value)"
+            class="w-full bg-slate-950/90 text-slate-100 text-sm font-medium pl-10 pr-9 py-2 rounded-full border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500 shadow-inner"
+            autocomplete="off"
+          />
+          <button id="clearSearchBtn" onclick="clearSearchText()" class="hidden absolute right-3 text-slate-400 hover:text-slate-200 text-xs z-10">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        </div>
+        <button id="closeSearchBtn" onclick="toggleSearch(false)" aria-label="Cancel Search" class="ml-3 w-9 h-9 rounded-full bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 flex items-center justify-center text-slate-400 hover:text-white transition-all focus:outline-none shrink-0">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+    </header>
+
+    <!-- Content Body Section -->
+    <main id="scrollableMain" class="flex-1 min-h-0 px-3 py-4 overflow-y-auto hide-scrollbar">
+      
+      <!-- Search Metadata Bar -->
+      <div id="searchResultsMeta" class="hidden mb-3 px-1 flex items-center justify-between text-xs text-slate-400">
+        <span>Search Results for "<span id="searchQueryText" class="text-slate-200 font-semibold"></span>"</span>
+        <span id="searchCountBadge" class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">0 found</span>
+      </div>
+
+      <!-- Initial Loading Skeleton Container -->
+      <div id="initialSkeleton" class="grid grid-cols-2 gap-3">
+        <div class="aspect-[3/4] bg-slate-800/50 animate-pulse rounded-2xl border border-slate-800"></div>
+        <div class="aspect-[3/4] bg-slate-800/50 animate-pulse rounded-2xl border border-slate-800"></div>
+        <div class="aspect-[3/4] bg-slate-800/50 animate-pulse rounded-2xl border border-slate-800"></div>
+        <div class="aspect-[3/4] bg-slate-800/50 animate-pulse rounded-2xl border border-slate-800"></div>
+      </div>
+
+      <!-- Profiles Grid Container -->
+      <div id="profilesGrid" class="grid grid-cols-2 gap-3 transition-all duration-300"></div>
+
+      <!-- Infinite Scroll Loading Spinner -->
+      <div id="loadingIndicator" class="hidden py-6 text-center text-xs text-slate-400">
+        <i class="fa-solid fa-circle-notch animate-spin text-indigo-500 mr-2"></i> Loading profiles...
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 px-4 text-center">
+        <div id="emptyStateIcon" class="w-16 h-16 rounded-full bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-500 mb-3">
+          <i class="fa-solid fa-user-slash text-2xl"></i>
+        </div>
+        <h3 id="emptyStateTitle" class="text-slate-200 font-semibold text-base mb-1">No profiles found</h3>
+        <p id="emptyStateMsg" class="text-slate-400 text-xs max-w-[240px]">We couldn't find any matching users.</p>
+        <button id="emptyStateBtn" onclick="clearSearchText()" class="mt-4 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-full text-xs font-medium border border-slate-700 transition-colors">
+          Reset Filter
+        </button>
+      </div>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <footer class="bg-slate-900/90 backdrop-blur-md border-t border-slate-800/80 px-6 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shrink-0 flex items-center justify-between select-none z-30">
+      <a href="discover.html" onclick="event.preventDefault(); handleProtectedRoute('discover.html')" class="flex flex-col items-center text-indigo-400 hover:text-indigo-300 transition-colors">
+        <i class="fa-solid fa-compass text-lg"></i>
+        <span class="text-[10px] font-medium mt-0.5">Discover</span>
+      </a>
+
+      <a href="protectme.html" onclick="event.preventDefault(); handleProtectedRoute('protectme.html')" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+        <i class="fa-solid fa-shield-halved text-lg"></i>
+        <span class="text-[10px] font-medium mt-0.5">Protect Me</span>
+      </a>
+
+      <a href="threads.html" onclick="event.preventDefault(); handleProtectedRoute('threads.html')" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+        <i class="fa-solid fa-message text-lg"></i>
+        <span class="text-[10px] font-medium mt-0.5">Chats</span>
+      </a>
+      
+      <a href="profiles.html" onclick="event.preventDefault(); handleProtectedRoute('profiles.html')" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+        <i class="fa-solid fa-user text-lg"></i>
+        <span class="text-[10px] font-medium mt-0.5">Profile</span>
+      </a>
+    </footer>
+
+    <!-- Slide-Up Profile Detail Sheet Modal -->
+    <div id="profileSheetOverlay" onclick="handleOverlayClick(event)" class="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col justify-end">
+      
+      <div id="profileSheet" class="w-full h-[88%] bg-slate-900 border-t border-slate-800 rounded-t-[32px] shadow-2xl flex flex-col overflow-hidden transform translate-y-full transition-transform duration-300 ease-out">
+        
+        <div class="relative pt-3 pb-2 px-4 flex items-center justify-between border-b border-slate-800/50 bg-slate-900/80 backdrop-blur-sm">
+          <div class="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto absolute inset-x-0 top-3"></div>
+          <div></div>
+          <button onclick="closeSheet()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-5 py-4 hide-scrollbar space-y-5">
+          <div class="flex flex-col items-center text-center">
+            <div class="relative mb-3">
+              <div class="w-24 h-24 rounded-full p-1 bg-slate-800 border border-slate-700 shadow-lg">
+                <img id="sheetAvatar" src="" alt="Profile Avatar" class="w-full h-full object-cover rounded-full bg-slate-800" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'" />
+              </div>
+              <div class="absolute bottom-0 left-0 w-7 h-7 bg-slate-800 border-2 border-slate-900 text-slate-200 rounded-full flex items-center justify-center text-xs">
+                <i class="fa-solid fa-star text-[10px] text-amber-400"></i>
+              </div>
+            </div>
+
+            <!-- Connect Button -->
+            <button id="sheetConnectBtn" onclick="handleConnectAction()" class="w-full max-w-[220px] py-2.5 px-6 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md active:scale-95 transition-all mb-2 flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-user-plus text-xs"></i>
+              <span id="sheetConnectBtnText">Connect</span>
+            </button>
+
+            <div class="flex items-center space-x-1.5 text-xs font-medium text-slate-400 mb-2">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span class="text-emerald-400 font-semibold">Currently Online</span>
+            </div>
+
+            <p id="sheetHandle" class="text-sm font-semibold text-slate-300">@handle</p>
+          </div>
+
+          <div class="bg-slate-950/60 rounded-2xl p-4 border border-slate-800/80 space-y-2">
+            <div>
+              <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Full Name</span>
+              <p id="sheetName" class="text-base font-bold text-slate-100">User Name</p>
+            </div>
+            <div class="pt-2 border-t border-slate-800/50 flex items-center justify-between">
+              <div>
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500">LGA Location</span>
+                <p id="sheetLga" class="text-xs font-medium text-slate-300 flex items-center mt-0.5">
+                  <i class="fa-solid fa-location-dot text-slate-400 text-xs mr-1.5"></i>
+                  <span>LGA Info</span>
+                </p>
+              </div>
+              <span class="px-2.5 py-1 bg-slate-800/80 text-slate-300 text-[10px] font-medium rounded-full border border-slate-700/60">
+                Verified Resident
+              </span>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex items-start space-x-3">
+            <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-500 flex-shrink-0 mt-0.5">
+              <i class="fa-solid fa-shield-triangle-bolt text-sm"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wide mb-1">Safety & Legal Notice</h4>
+              <p class="text-[11px] leading-relaxed text-slate-400">
+                Legal actions will be taken if anyone is a predator, pedophile or human trafficker, with sentence lasting up to <span class="font-bold text-slate-200">90 years</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    const SUPABASE_URL = 'https://djryydilgqntazeibxch.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_Gu2BJqoYClKbb9xgqJuHuw_MtPk2d5I';
+
+    let supabaseClient = null;
+    let currentUser = null;
+    let currentUserProfile = null;
+    let activeProfileInSheet = null;
+
+    let allProfiles = [];
+    let currentTab = 'discover';
+    let searchQuery = '';
+    let page = 0;
+    const PAGE_SIZE = 20;
+    let isLoading = false;
+    let hasMore = true;
+    let searchDebounceTimeout = null;
+
+    // Initialize Supabase Client safely
+    try {
+      if (typeof window.supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {
+      console.error('Supabase initialization failed:', e);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      setupScrollListener();
+      
+      // Sync theme selector dropdown if available
+      const selector = document.getElementById('themeSelector');
+      if (selector) {
+        selector.value = localStorage.getItem('user-app-theme') || 'twilight';
+      }
+
+      await initializeAuthAndData();
+    });
+
+    // Theme Switcher Helper Function
+    function changeTheme(themeName) {
+      document.documentElement.setAttribute('data-theme', themeName);
+      localStorage.setItem('user-app-theme', themeName);
+    }
+
+    // Attach listener for Infinite Scroll Lazy Load
+    function setupScrollListener() {
+      const scrollableContainer = document.getElementById('scrollableMain');
+      if (scrollableContainer) {
+        scrollableContainer.addEventListener('scroll', () => {
+          if (isLoading || !hasMore) return;
+          const { scrollTop, scrollHeight, clientHeight } = scrollableContainer;
+          if (scrollTop + clientHeight >= scrollHeight - 150) {
+            loadMoreProfiles();
+          }
+        });
+      }
+    }
+
+    // 1. Initialize Authentication & User Profile State
+    async function initializeAuthAndData() {
+      if (!supabaseClient) {
+        showEmptyState('Unable to connect to service database.', 'Connection Error');
+        hideInitialSkeleton();
+        return;
+      }
+
+      try {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        
+        if (sessionError) throw sessionError;
+
+        if (session && session.user) {
+          currentUser = session.user;
+          
+          const { data: profile, error: profileError } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+
+          if (!profileError) {
+            currentUserProfile = profile;
+          }
+        }
+      } catch (err) {
+        console.warn('Auth state check error:', err);
+      } finally {
+        await loadTabProfiles(true);
+      }
+    }
+
+    // 2. Main Data Fetching Engine
+    async function loadTabProfiles(isInitial = false) {
+      if (!supabaseClient) return;
+
+      if (isInitial) {
+        page = 0;
+        hasMore = true;
+        allProfiles = [];
+        document.getElementById('profilesGrid').innerHTML = '';
+        showInitialSkeleton();
+      }
+
+      if (!hasMore || isLoading) return;
+
+      isLoading = true;
+      if (!isInitial) toggleLoadingIndicator(true);
+
+      try {
+        let fetchedData = [];
+
+        if (searchQuery.length > 0) {
+          const term = `%${searchQuery}%`;
+          
+          let queryBuilder = supabaseClient
+            .from('profiles')
+            .select('*')
+            .or(`handle.ilike.${term},full_name.ilike.${term},lga.ilike.${term},state.ilike.${term}`)
+            .order('updated_at', { ascending: false })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+          const { data, error } = await queryBuilder;
+
+          if (error) throw error;
+          fetchedData = data || [];
+
+        } else if (currentTab === 'discover') {
+          const { data, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+          if (error) throw error;
+          fetchedData = data || [];
+
+        } else if (currentTab === 'foryou') {
+          if (!currentUser || !currentUserProfile) {
+            allProfiles = [];
+            document.getElementById('profilesGrid').innerHTML = '';
+            showGuestForYouPrompt();
+            return;
+          }
+
+          const userState = currentUserProfile.state || '';
+          const userLga = currentUserProfile.lga || '';
+
+          const { data, error } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .or(`state.eq.${userState},lga.eq.${userLga}`)
+            .neq('id', currentUser.id)
+            .order('updated_at', { ascending: false })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+          if (error) throw error;
+          fetchedData = data || [];
+        }
+
+        if (fetchedData.length < PAGE_SIZE) {
+          hasMore = false;
+        }
+
+        const existingIds = new Set(allProfiles.map(p => p.id));
+        const uniqueNewData = fetchedData.filter(p => !existingIds.has(p.id));
+
+        allProfiles = [...allProfiles, ...uniqueNewData];
+        page++;
+        renderCards();
+
+      } catch (err) {
+        console.error('Error fetching profiles:', err);
+        showEmptyState('Could not load profile records. Please try again.', 'Database Error');
+      } finally {
+        isLoading = false;
+        hideInitialSkeleton();
+        toggleLoadingIndicator(false);
+      }
+    }
+
+    async function loadMoreProfiles() {
+      await loadTabProfiles(false);
+    }
+
+    function showInitialSkeleton() {
+      const skel = document.getElementById('initialSkeleton');
+      if (skel) skel.classList.remove('hidden');
+    }
+
+    function hideInitialSkeleton() {
+      const skel = document.getElementById('initialSkeleton');
+      if (skel) skel.classList.add('hidden');
+    }
+
+    function toggleLoadingIndicator(show) {
+      const loader = document.getElementById('loadingIndicator');
+      if (loader) {
+        if (show) loader.classList.remove('hidden');
+        else loader.classList.add('hidden');
+      }
+    }
+
+    // Navigation Tab Switching
+    async function switchTab(tab) {
+      if (currentTab === tab) return;
+      currentTab = tab;
+
+      const indicator = document.getElementById('tabIndicator');
+      const discoverBtn = document.getElementById('tabDiscover');
+      const forYouBtn = document.getElementById('tabForYou');
+
+      if (tab === 'discover') {
+        indicator.style.transform = 'translateX(0px)';
+        indicator.style.width = '82px';
+        discoverBtn.classList.remove('text-slate-400');
+        discoverBtn.classList.add('text-white');
+        forYouBtn.classList.remove('text-white');
+        forYouBtn.classList.add('text-slate-400');
+      } else {
+        indicator.style.transform = 'translateX(82px)';
+        indicator.style.width = '76px';
+        forYouBtn.classList.remove('text-slate-400');
+        forYouBtn.classList.add('text-white');
+        discoverBtn.classList.remove('text-white');
+        discoverBtn.classList.add('text-slate-400');
+      }
+
+      await loadTabProfiles(true);
+    }
+
+    function handleConnectAction() {
+      if (!currentUser) {
+        window.location.href = 'login.html';
+      } else {
+        alert(`Connection request sent to @${activeProfileInSheet?.handle || 'user'}!`);
+      }
+    }
+
+    function handleProtectedRoute(path) {
+      if (!currentUser) {
+        window.location.href = 'login.html';
+      } else {
+        window.location.href = path;
+      }
+    }
+
+    // Search Controls with 400ms Debounce
+    function toggleSearch(expand) {
+      const defaultHeader = document.getElementById('defaultHeader');
+      const expandedSearch = document.getElementById('expandedSearch');
+      const searchInput = document.getElementById('searchInput');
+
+      if (expand) {
+        defaultHeader.classList.remove('opacity-100');
+        defaultHeader.classList.add('opacity-0', 'pointer-events-none');
+        expandedSearch.classList.remove('opacity-0', 'pointer-events-none');
+        expandedSearch.classList.add('opacity-100');
+        setTimeout(() => searchInput.focus(), 150);
+      } else {
+        expandedSearch.classList.remove('opacity-100');
+        expandedSearch.classList.add('opacity-0', 'pointer-events-none');
+        defaultHeader.classList.remove('opacity-0', 'pointer-events-none');
+        defaultHeader.classList.add('opacity-100');
+        clearSearchText();
+      }
+    }
+
+    function handleSearch(val) {
+      const clearBtn = document.getElementById('clearSearchBtn');
+      const metaBox = document.getElementById('searchResultsMeta');
+      const queryText = document.getElementById('searchQueryText');
+
+      if (val.trim().length > 0) {
+        clearBtn.classList.remove('hidden');
+        metaBox.classList.remove('hidden');
+        queryText.innerText = val;
+      } else {
+        clearBtn.classList.add('hidden');
+        metaBox.classList.add('hidden');
+      }
+
+      if (searchDebounceTimeout) clearTimeout(searchDebounceTimeout);
+
+      searchDebounceTimeout = setTimeout(async () => {
+        searchQuery = val.trim().toLowerCase();
+        await loadTabProfiles(true);
+      }, 400);
+    }
+
+    function clearSearchText() {
+      const searchInput = document.getElementById('searchInput');
+      searchInput.value = '';
+      searchQuery = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      document.getElementById('searchResultsMeta').classList.add('hidden');
+      loadTabProfiles(true);
+    }
+
+    // Render Profiles Grid Card Templates
+    function renderCards() {
+      const grid = document.getElementById('profilesGrid');
+      const emptyState = document.getElementById('emptyState');
+      const countBadge = document.getElementById('searchCountBadge');
+
+      if (searchQuery) countBadge.innerText = `${allProfiles.length} found`;
+
+      if (allProfiles.length === 0 && !isLoading) {
+        grid.innerHTML = '';
+        showEmptyState('No matching profiles found.', 'No profiles found');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      grid.innerHTML = allProfiles.map(profile => {
+        const avatarUrl = profile.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';
+        const displayLga = profile.lga ? `${profile.lga}${profile.state ? ', ' + profile.state : ''}` : 'Location N/A';
+        const handle = profile.handle || 'user';
+
+        return `
+          <div 
+            onclick="openProfileSheet('${profile.id}')"
+            class="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-800 cursor-pointer shadow-lg hover:border-slate-700 transition-all duration-300 transform active:scale-98"
+          >
+            <img 
+              src="${avatarUrl}" 
+              alt="${profile.full_name || handle}"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+              loading="lazy"
+              onerror="this.src='https://placehold.co/400x533/1e293b/ffffff?text=${handle}'"
+            />
+
+            <div class="absolute top-2.5 left-2.5 z-10 flex items-center space-x-1.5 bg-slate-950/60 backdrop-blur-md border border-white/10 px-2 py-1 rounded-full shadow-sm">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span class="text-[9px] font-medium text-slate-200 tracking-wide uppercase">Live</span>
+            </div>
+
+            <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
+
+            <div class="absolute bottom-3 inset-x-3 z-10 flex flex-col justify-end">
+              <p class="text-sm font-bold text-white tracking-tight drop-shadow-md truncate">@${handle}</p>
+              <p class="text-[11px] font-medium text-slate-300/90 flex items-center mt-0.5 truncate drop-shadow">
+                <i class="fa-solid fa-location-dot text-[10px] text-slate-400 mr-1 flex-shrink-0"></i>
+                <span class="truncate">${displayLga}</span>
+              </p>
+            </div>
+
+            <div class="absolute inset-0 border border-white/10 rounded-2xl pointer-events-none"></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showGuestForYouPrompt() {
+      const emptyState = document.getElementById('emptyState');
+      const emptyTitle = document.getElementById('emptyStateTitle');
+      const emptyStateMsg = document.getElementById('emptyStateMsg');
+      const emptyStateBtn = document.getElementById('emptyStateBtn');
+
+      emptyTitle.innerText = 'Login Required';
+      emptyStateMsg.innerText = 'Sign in/login to see people near your local government area.';
+      emptyStateBtn.innerText = 'Sign In / Register';
+      emptyStateBtn.onclick = () => {
+        window.location.href = 'login.html';
+      };
+
+      emptyState.classList.remove('hidden');
+    }
+
+    function showEmptyState(msg, title = 'No profiles found') {
+      const emptyState = document.getElementById('emptyState');
+      const emptyTitle = document.getElementById('emptyStateTitle');
+      const emptyStateBtn = document.getElementById('emptyStateBtn');
+      
+      emptyTitle.innerText = title;
+      document.getElementById('emptyStateMsg').innerText = msg;
+      emptyStateBtn.innerText = 'Reset Filter';
+      emptyStateBtn.onclick = clearSearchText;
+      emptyState.classList.remove('hidden');
+    }
+
+    // Profile Detail Sheet Actions
+    function openProfileSheet(profileId) {
+      const profile = allProfiles.find(p => p.id === profileId);
+      if (!profile) return;
+
+      activeProfileInSheet = profile;
+
+      const avatarUrl = profile.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80';
+      const displayLga = profile.lga ? `${profile.lga}${profile.state ? ', ' + profile.state : ''}` : 'Location N/A';
+
+      document.getElementById('sheetAvatar').src = avatarUrl;
+      document.getElementById('sheetName').innerText = profile.full_name || 'Anonymous User';
+      document.getElementById('sheetLga').querySelector('span').innerText = displayLga;
+      document.getElementById('sheetHandle').innerText = `@${profile.handle || 'user'}`;
+
+      document.getElementById('sheetConnectBtnText').innerText = currentUser ? 'Connect' : 'Sign in to Connect';
+
+      const overlay = document.getElementById('profileSheetOverlay');
+      const sheet = document.getElementById('profileSheet');
+
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+      overlay.classList.add('opacity-100');
+
+      setTimeout(() => {
+        sheet.classList.remove('translate-y-full');
+        sheet.classList.add('translate-y-0');
+      }, 50);
+    }
+
+    function closeSheet() {
+      const overlay = document.getElementById('profileSheetOverlay');
+      const sheet = document.getElementById('profileSheet');
+
+      sheet.classList.remove('translate-y-0');
+      sheet.classList.add('translate-y-full');
+
+      setTimeout(() => {
+        overlay.classList.remove('opacity-100');
+        overlay.classList.add('opacity-0', 'pointer-events-none');
+      }, 250);
+    }
+
+    function handleOverlayClick(event) {
+      if (event.target.id === 'profileSheetOverlay') closeSheet();
+    }
+  </script>
+</body>
+</html>
