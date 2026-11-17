@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cyber Security Scan & Center</title>
+
+    <!-- CRITICAL: Prevent Theme Glitch/Flash by applying theme immediately BEFORE render -->
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('user-app-theme') || 'twilight';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
+    </script>
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="stylesheet" href="theme.css" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Supabase JS SDK CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Google Maps JS API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#eef2ff',
+                500: '#6366f1',
+                600: '#4f46e5',
+                700: '#4338ca',
+              }
+            },
+            keyframes: {
+              pulseFaint: {
+                '0%, 100%': { opacity: '0.9', transform: 'scale(1)' },
+                '50%': { opacity: '0.4', transform: 'scale(0.85)' },
+              }
+            },
+            animation: {
+              'pulse-faint': 'pulseFaint 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+          width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #1e293b;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #334155;
+        }
+        .hide-scrollbar::-webkit-scrollbar,
+        .phase2-scroll-content::-webkit-scrollbar,
+        .modal-scroll-content::-webkit-scrollbar {
+            display: none;
+            width: 0px;
+            background: transparent;
+        }
+        .phase2-scroll-content,
+        .modal-scroll-content,
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Viewport Container - Controlled dynamically via JS for exact visible screen height */
+        .scan-app-viewport {
+            height: 100vh;
+            height: var(--app-height, 100vh);
+        }
+
+        /* Ambient Backgrounds */
+        .bg-security-dark {
+            background: radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 50%, #020617 100%);
+        }
+
+        /* Phase 1 Radar Sweeper */
+        .radar-aura {
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.28) 0%, rgba(99, 102, 241, 0) 70%);
+            animation: pulseAura 2.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseAura {
+            0% { transform: scale(0.75); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.9; }
+        }
+
+        .radar-sweep-element {
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(99, 102, 241, 0.35) 360deg);
+        }
+
+        .phase-1-active .radar-sweep-element {
+            animation: sweep 2.5s linear infinite;
+        }
+
+        /* Continuous Slow Radar Sweep in Phase 2 */
+        .phase-2-active .radar-sweep-element {
+            animation: sweep 8s linear infinite;
+            opacity: 0.45;
+        }
+
+        @keyframes sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pentagon Path Styling */
+        .pentagon-path {
+            stroke: #f1f5f9;
+            stroke-width: 2.5;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.9));
+        }
+
+        .inner-connector {
+            stroke: rgba(99, 102, 241, 0.55);
+            stroke-width: 1.5;
+            stroke-dasharray: 4 3;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Center Shield */
+        .center-shield {
+            opacity: 0;
+            transform-origin: center center;
+            transform: scale(0.5) rotate(-10deg);
+            transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .center-shield.visible {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+
+        /* Category Items Animation */
+        .category-item {
+            opacity: 0.3;
+            transform: translateY(8px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .category-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Segment Line Animation */
+        .segment-line {
+            stroke: rgba(99, 102, 241, 0.9);
+            stroke-width: 2.5;
+            filter: drop-shadow(0 0 4px rgba(99, 102, 241, 0.7));
+        }
+
+        /* 3D Cyber Floor Grid */
+        .perspective-container {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 75px;
+            bottom: 0;
+            perspective: 200px;
+            overflow: hidden;
+            z-index: 5;
+        }
+
+        .cyber-grid-3d {
+            position: absolute;
+            left: -30%;
+            right: -30%;
+            top: 0;
+            bottom: -100px;
+
+            transform: rotateX(60deg);
+            transform-origin: 50% 0%;
+
+            background-image:
+                linear-gradient(
+                    to right,
+                    rgba(99, 102, 241, 0.3) 1.5px,
+                    transparent 1.5px
+                ),
+                linear-gradient(
+                    to bottom,
+                    rgba(99, 102, 241, 0.3) 1.5px,
+                    transparent 1.5px
+                );
+
+            background-size: 30px 30px;
+        }
+
+        .phase-1-active .cyber-grid-3d {
+            animation: gridScroll 2s linear infinite;
+        }
+
+        @keyframes gridScroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 60px; }
+        }
+
+        /* City Skyline */
+        .city-skyline {
+            position: absolute;
+            top: 4px;
+            left: 0;
+            right: 0;
+            height: 75px;
+            pointer-events: none;
+            opacity: 0.35;
+            z-index: 20;
+        }
+
+        @keyframes windowFlicker {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        .city-light {
+            animation: windowFlicker 3s ease-in-out infinite alternate;
+        }
+
+        /* PHASE TRANSITION MORPHING CSS */
+        .radar-box {
+            transition: all 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center center;
+            transform: translateY(-52px);
+        }
+
+        .phase-2-active .phase1-hero-section,
+        .phase-3-active .phase1-hero-section {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .phase2-scroll-view {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+            pointer-events: none;
+        }
+
+        .phase-2-active .phase2-scroll-view {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .phase3-view {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+            pointer-events: none;
+        }
+
+        .phase-3-active .phase3-view {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .phase1-element {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .phase-2-active .phase1-element,
+        .phase-3-active .phase1-element {
+            opacity: 0;
+            transform: translateY(40px);
+            pointer-events: none;
+        }
+
+        .bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 30;
+        }
+        .phase-1-active .bottom-nav,
+        .phase-3-active .bottom-nav {
+            display: none !important;
+        }
+
+        /* Protect Me Button */
+        .btn-update {
+            background: #6366f1;
+            box-shadow: 0 4px 18px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-update:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(99, 102, 241, 0.6);
+        }
+
+        /* Animated Loading Dot / Spinner */
+        .spinner-dot-anim {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spinDot 0.8s linear infinite;
+        }
+
+        @keyframes spinDot {
+            to { transform: rotate(360deg); }
+        }
+
+        .font-serif-legal {
+            font-family: 'Cinzel', Georgia, serif;
+        }
+
+        #protect-modal {
+            transition: opacity 0.3s ease;
+        }
+        #protect-modal-content {
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Custom Radio Styling for Visiting / Hosting */
+        .role-option-card {
+            background-color: #090d16;
+            border: 1px solid rgba(51, 65, 85, 0.8);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .role-option-card:hover {
+            border-color: #6366f1;
+            background-color: #1e293b;
+        }
+
+        .role-option-card input[type="radio"]:checked + .role-content {
+            color: #818cf8;
+        }
+
+        .role-option-card:has(input[type="radio"]:checked) {
+            border-color: #6366f1;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+        }
+
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        details[open] summary .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-950 font-sans antialiased flex flex-col items-center justify-start min-h-screen text-slate-100 overflow-hidden">
+
+    <!-- Desktop Outer Wrapper to retain mobile-first app structure on desktop/laptops -->
+    <div class="w-full max-w-[480px] h-[100dvh] sm:h-[92vh] sm:my-4 bg-slate-900 border-x border-slate-800/80 sm:rounded-[36px] shadow-2xl shadow-slate-950/50 overflow-hidden flex flex-col relative transition-all duration-300">
+
+        <!-- Screen Container -->
+        <main id="app-container" class="scan-app-viewport relative w-full bg-security-dark shadow-2xl overflow-hidden border border-slate-800/40 flex flex-col justify-between phase-1-active">
+            
+            <!-- HEADER REGION -->
+            <header class="relative w-full pt-4 px-6 h-10 flex justify-between items-center z-30 flex-shrink-0">
+            </header>
+
+            <!-- PHASE 1: CENTER HERO SECTION -->
+            <section class="phase1-hero-section relative flex-1 flex items-center justify-center my-auto min-h-[280px] px-6">
+                <!-- UNIFIED PENTAGON RADAR BOX (PHASE 1) -->
+                <div id="radar-box" class="radar-box relative flex items-center justify-center z-25">
+                    <div class="radar-aura absolute w-40 h-40 rounded-full pointer-events-none"></div>
+                    <div class="radar-sweep-element pointer-events-none"></div>
+
+                    <svg class="w-[260px] h-[260px] pointer-events-none z-10" viewBox="0 0 300 300">
+                        <defs>
+                            <pattern id="shield-grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255, 255, 255, 0.4)" stroke-width="0.8"/>
+                            </pattern>
+                            <linearGradient id="shield-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#818cf8" />
+                                <stop offset="100%" stop-color="#4f46e5" />
+                            </linearGradient>
+                            <filter id="node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#818cf8" flood-opacity="0.8"/>
+                            </filter>
+                        </defs>
+
+                        <path id="pentagon-stroke" d="M150,35 L249.9,107.6 L211.8,224.9 L88.2,224.9 L50.1,107.6 Z" class="pentagon-path" fill="none" />
+                        
+                        <line id="conn-1" x1="150" y1="35" x2="150" y2="100" class="inner-connector" />
+                        <line id="conn-2" x1="249.9" y1="107.6" x2="185" y2="128" class="inner-connector" />
+                        <line id="conn-3" x1="211.8" y1="224.9" x2="172" y2="170" class="inner-connector" />
+                        <line id="conn-4" x1="88.2" y1="224.9" x2="128" y2="170" class="inner-connector" />
+                        <line id="conn-5" x1="50.1" y1="107.6" x2="115" y2="128" class="inner-connector" />
+
+                        <g id="center-shield" class="center-shield">
+                            <g transform="translate(118, 92) scale(0.64)">
+                                <path d="M50 5 L92 22 V55 C92 80 50 112 50 112 C50 112 8 80 8 55 V22 Z" fill="#e2e8f0" opacity="0.9" />
+                                <path d="M50 10 L86 25 V53 C86 74 50 102 50 102 C50 102 14 74 14 53 V25 Z" fill="url(#shield-grad)" />
+                                <path d="M50 10 L86 25 V53 C86 74 50 102 50 102 C50 102 14 74 14 53 V25 Z" fill="url(#shield-grid)" />
+                                <path d="M33 54 L46 67 L68 41" fill="none" stroke="#ffffff" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" />
+                            </g>
+                        </g>
+
+                        <g id="node-1" class="vertex-svg-node" transform="translate(150, 35) scale(0)" opacity="0" style="transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;">
+                            <circle cx="0" cy="0" r="16" fill="#ffffff" filter="url(#node-shadow)" />
+                            <foreignObject x="-10" y="-10" width="20" height="20">
+                                <div class="w-full h-full flex items-center justify-center text-indigo-600">
+                                    <i class="fa-solid fa-id-card text-[11px]"></i>
+                                </div>
+                            </foreignObject>
+                        </g>
+
+                        <g id="node-2" class="vertex-svg-node" transform="translate(249.9, 107.6) scale(0)" opacity="0" style="transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;">
+                            <circle cx="0" cy="0" r="16" fill="#ffffff" filter="url(#node-shadow)" />
+                            <foreignObject x="-10" y="-10" width="20" height="20">
+                                <div class="w-full h-full flex items-center justify-center text-indigo-600">
+                                    <i class="fa-solid fa-location-dot text-[11px]"></i>
+                                </div>
+                            </foreignObject>
+                        </g>
+
+                        <g id="node-3" class="vertex-svg-node" transform="translate(211.8, 224.9) scale(0)" opacity="0" style="transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;">
+                            <circle cx="0" cy="0" r="16" fill="#ffffff" filter="url(#node-shadow)" />
+                            <foreignObject x="-10" y="-10" width="20" height="20">
+                                <div class="w-full h-full flex items-center justify-center text-indigo-600">
+                                    <i class="fa-solid fa-shield-halved text-[12px]"></i>
+                                </div>
+                            </foreignObject>
+                        </g>
+
+                        <g id="node-4" class="vertex-svg-node" transform="translate(88.2, 224.9) scale(0)" opacity="0" style="transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;">
+                            <circle cx="0" cy="0" r="16" fill="#ffffff" filter="url(#node-shadow)" />
+                            <foreignObject x="-10" y="-10" width="20" height="20">
+                                <div class="w-full h-full flex items-center justify-center text-indigo-600">
+                                    <i class="fa-solid fa-comments text-[11px]"></i>
+                                </div>
+                            </foreignObject>
+                        </g>
+
+                        <g id="node-5" class="vertex-svg-node" transform="translate(50.1, 107.6) scale(0)" opacity="0" style="transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;">
+                            <circle cx="0" cy="0" r="16" fill="#ffffff" filter="url(#node-shadow)" />
+                            <foreignObject x="-10" y="-10" width="20" height="20">
+                                <div class="w-full h-full flex items-center justify-center text-indigo-600">
+                                    <i class="fa-solid fa-bell text-[11px]"></i>
+                                </div>
+                            </foreignObject>
+                        </g>
+                    </svg>
+                </div>
+            </section>
+
+            <!-- PHASE 2 FULL SCROLLING VIEW -->
+            <div class="phase2-scroll-view absolute inset-x-0 top-0 bottom-[68px] px-4 pt-6 pb-8 z-30 flex flex-col gap-6 overflow-y-auto phase2-scroll-content">
+                
+                <!-- TOP HERO SECTION INSIDE SCROLL VIEW: RADAR & BANNER TOGETHER -->
+                <div class="relative w-full min-h-[220px] flex items-center justify-between pt-4 pb-2">
+                    <div class="w-[55%] flex flex-col items-start gap-2 z-20">
+                        <h1 class="text-2xl font-extrabold text-slate-100 tracking-tight leading-tight">Anti-Kito Protection</h1>
+                        
+                        <div class="flex items-start gap-1.5 text-xs text-slate-300 leading-snug">
+                            <span class="text-amber-400 text-sm">⚠️</span>
+                            <span class="font-medium">We Go Protect You!</span>
+                        </div>
+
+                        <button onclick="openProtectModal('protect')" class="btn-update mt-1 px-5 py-2 rounded-full text-white font-bold text-xs tracking-wide flex items-center gap-2 active:scale-95">
+                            Protect Me
+                        </button>
+                    </div>
+
+                    <div class="relative w-36 h-36 flex items-center justify-center flex-shrink-0 z-20">
+                        <div class="radar-aura absolute w-32 h-32 rounded-full pointer-events-none"></div>
+                        <div class="radar-sweep-element !w-32 !h-32 pointer-events-none"></div>
+                        
+                        <svg class="w-32 h-32 pointer-events-none z-10" viewBox="0 0 300 300">
+                            <path d="M150,35 L249.9,107.6 L211.8,224.9 L88.2,224.9 L50.1,107.6 Z" class="pentagon-path" fill="none" />
+                            <g transform="translate(118, 92) scale(0.64)">
+                                <path d="M50 5 L92 22 V55 C92 80 50 112 50 112 C50 112 8 80 8 55 V22 Z" fill="#e2e8f0" opacity="0.9" />
+                                <path d="M50 10 L86 25 V53 C86 74 50 102 50 102 C50 102 14 74 14 53 V25 Z" fill="url(#shield-grad)" />
+                                <path d="M33 54 L46 67 L68 41" fill="none" stroke="#ffffff" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" />
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- SECTION 1: SERIOUS LEGAL WARNING CONTAINER -->
+                <div class="relative w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4 border border-red-500/30 shadow-2xl space-y-2.5">
+                    <div class="flex items-center justify-between border-b border-red-500/20 pb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-gavel text-red-400 text-sm"></i>
+                            <span class="font-serif-legal font-bold tracking-wider text-xs text-red-200 uppercase">Legal Warning & Statutory Penalties</span>
+                        </div>
+                        <span class="text-[9px] font-extrabold text-red-400 bg-red-950/80 border border-red-500/40 px-2 py-0.5 rounded">LEGAL NOTICE</span>
+                    </div>
+
+                    <div class="space-y-2 text-[11px] leading-relaxed text-slate-300">
+                        <p class="font-bold text-red-400 tracking-wide uppercase text-[10.5px] flex items-center gap-1.5">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                            Punishment for Lure Behaviour (Kito) & Violence
+                        </p>
+                        
+                        <p class="text-justify text-slate-300 text-[10.5px] leading-relaxed">
+                            Entrapment, extortion, armed ambush, blackmail, and violent assault disguised as social meetups are criminal felonies heavily prosecuted under Federal Legislation.
+                        </p>
+
+                        <div class="bg-slate-950/80 rounded-xl p-2.5 border border-slate-800 space-y-1.5">
+                            <div class="flex items-start gap-1.5 text-slate-300">
+                                <i class="fa-solid fa-scale-balanced text-xs mt-0.5 flex-shrink-0 text-red-400"></i>
+                                <div>
+                                    <span class="font-bold text-slate-200">Statutory Act:</span>
+                                    <span class="text-slate-300"> Cybercrimes (Prohibition, Prevention, etc.) Act 2015 & Criminal Code Act (Cap C38).</span>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-1.5 text-slate-300">
+                                <i class="fa-solid fa-handcuffs text-xs mt-0.5 flex-shrink-0 text-red-400"></i>
+                                <div>
+                                    <span class="font-bold text-slate-200">Sentence & Penalty:</span>
+                                    <span class="text-slate-300"> Facing <strong class="text-red-400 underline decoration-red-500">14 years up to Life Imprisonment</strong>, non-bailable, with total asset forfeiture. Offenses of Kidnapping carry a maximum of <strong>10 to 20 years to Life Imprisonment</strong>, Armed Robbery carries <strong>21 years to Death Penalty</strong>, and Extortion & Blackmail carry up to <strong>14 years Imprisonment</strong>.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: ZERO TOLERANCE LAWYER WARNING -->
+                <div class="w-full flex items-center justify-between gap-3 px-1 py-1">
+                    <div class="w-28 h-32 flex-shrink-0 relative flex items-center justify-center">
+                        <svg viewBox="0 0 120 140" class="w-full h-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+                            <defs>
+                                <linearGradient id="lawyerSkin" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#3d2314"/>
+                                    <stop offset="100%" stop-color="#1f1008"/>
+                                </linearGradient>
+                                <linearGradient id="robeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stop-color="#0f172a"/>
+                                    <stop offset="100%" stop-color="#020617"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M10,135 Q12,85 60,85 Q108,85 110,135 Z" fill="url(#robeGrad)"/>
+                            <path d="M48,85 L60,108 L72,85 Z" fill="#ffffff"/>
+                            <path d="M54,85 L54,115 L59,115 L59,85 Z" fill="#f8fafc"/>
+                            <path d="M61,85 L61,115 L66,115 L66,85 Z" fill="#f8fafc"/>
+                            <rect x="50" y="70" width="20" height="18" fill="url(#lawyerSkin)" rx="3"/>
+                            <path d="M36,32 C36,18 84,18 84,32 C84,62 74,76 60,76 C46,76 36,62 36,32 Z" fill="url(#lawyerSkin)"/>
+                            <path d="M34,28 C34,12 86,12 86,28 C86,18 76,10 60,10 C44,10 34,18 34,28 Z" fill="#0d0603"/>
+                            <rect x="42" y="38" width="14" height="10" rx="2" fill="none" stroke="#e2e8f0" stroke-width="1.8"/>
+                            <rect x="64" y="38" width="14" height="10" rx="2" fill="none" stroke="#e2e8f0" stroke-width="1.8"/>
+                            <line x1="56" y1="42" x2="64" y2="42" stroke="#e2e8f0" stroke-width="1.8"/>
+                            <circle cx="49" cy="43" r="1.8" fill="#ffffff"/>
+                            <circle cx="71" cy="43" r="1.8" fill="#ffffff"/>
+                            <path d="M41,34 L56,38" stroke="#000000" stroke-width="3" stroke-linecap="round"/>
+                            <path d="M79,34 L64,38" stroke="#000000" stroke-width="3" stroke-linecap="round"/>
+                            <path d="M60,42 L57,54 L63,54" fill="none" stroke="#170a04" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M48,63 Q60,60 72,63" fill="none" stroke="#170a04" stroke-width="2.5" stroke-linecap="round"/>
+                            <path d="M22,100 L34,100 M28,100 L28,118 M20,118 L36,118" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+
+                    <div class="flex-1 text-left space-y-1">
+                        <div class="flex items-center gap-1.5 text-indigo-400 font-extrabold text-[11px] tracking-wide uppercase">
+                            <i class="fa-solid fa-scale-unbalanced-flip text-xs"></i>
+                            <span>Zero Tolerance Warning</span>
+                        </div>
+                        <p class="text-xs text-slate-100 font-bold leading-tight">
+                            If you are a kito, we have ZERO tolerance.
+                        </p>
+                        <p class="text-[10.5px] text-slate-300 leading-snug">
+                            We have over <strong class="text-indigo-400">1,000 Nigerian and foreign-based lawyers</strong> on active standby who will aggressively table your actions in court and guarantee you face the full, unyielding weight of the law. <span class="text-red-400 font-semibold">There is no escape.</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: VICTIM AMBUSH PROTECT RADAR -->
+                <div class="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-slate-950 rounded-2xl p-3.5 border border-slate-800 shadow-lg">
+                    <div class="flex-1 text-left space-y-1.5">
+                        <div class="flex items-center gap-1.5 text-amber-400 font-bold text-[11px] uppercase tracking-wider">
+                            <i class="fa-solid fa-hand-holding-hand text-xs"></i>
+                            <span>Victim Protection Radar</span>
+                        </div>
+                        
+                        <h2 class="text-xs font-extrabold text-slate-100 leading-tight">
+                            If you are a victim of lure ambush (kito):
+                        </h2>
+
+                        <p class="text-[10px] text-slate-300 leading-relaxed text-justify">
+                            Because you are now a verified member of the <span class="text-indigo-400 font-bold">GBOI Community</span>, you are fully protected by our radar. By clicking <strong class="text-indigo-400">Protect Me</strong>, your movements are continuously monitored by our security team.
+                        </p>
+
+                        <p class="text-[10px] text-slate-400 leading-relaxed text-justify">
+                            In an emergency, we immediately fire priority alerts to your nearest emergency contacts to rescue you as we coordinate directly with the police to apprehend the offenders. <span class="text-amber-300 font-medium">We guarantee that even in death, offenders will face absolute justice.</span>
+                        </p>
+                    </div>
+
+                    <div class="w-24 h-32 flex-shrink-0 relative flex items-center justify-center">
+                        <svg viewBox="0 0 110 140" class="w-full h-full drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]">
+                            <defs>
+                                <linearGradient id="boySkin" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#523019"/>
+                                    <stop offset="100%" stop-color="#2c170b"/>
+                                </linearGradient>
+                                <linearGradient id="rainbowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#ef4444"/>
+                                    <stop offset="20%" stop-color="#f97316"/>
+                                    <stop offset="40%" stop-color="#eab308"/>
+                                    <stop offset="60%" stop-color="#22c55e"/>
+                                    <stop offset="80%" stop-color="#3b82f6"/>
+                                    <stop offset="100%" stop-color="#a855f7"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M10,135 Q15,82 55,82 Q95,82 100,135 Z" fill="url(#rainbowGrad)"/>
+                            <path d="M42,82 C42,95 68,95 68,82 Z" fill="url(#boySkin)"/>
+                            <rect x="46" y="68" width="18" height="16" fill="url(#boySkin)" rx="2"/>
+                            <path d="M32,32 C32,18 78,18 78,32 C78,60 70,72 55,72 C40,72 32,60 32,32 Z" fill="url(#boySkin)"/>
+                            <path d="M30,30 C30,10 80,10 80,30 C80,20 72,12 55,12 C38,12 30,20 30,30 Z" fill="#0d0603"/>
+                            <ellipse cx="55" cy="18" rx="24" ry="10" fill="#170c06"/>
+                            <ellipse cx="45" cy="38" rx="3.5" ry="3" fill="#ffffff"/>
+                            <circle cx="46" cy="38" r="1.8" fill="#1f1008"/>
+                            <ellipse cx="65" cy="38" rx="3.5" ry="3" fill="#ffffff"/>
+                            <circle cx="64" cy="38" r="1.8" fill="#1f1008"/>
+                            <path d="M40,32 Q46,30 50,33" stroke="#0d0603" stroke-width="2" fill="none" stroke-linecap="round"/>
+                            <path d="M70,32 Q64,30 60,33" stroke="#0d0603" stroke-width="2" fill="none" stroke-linecap="round"/>
+                            <path d="M46,55 Q55,63 64,55" fill="none" stroke="#1f1008" stroke-width="2.2" stroke-linecap="round"/>
+                            <circle cx="31" cy="44" r="2" fill="#fbbf24"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: INTERACTIVE DROP-DOWN HOW IT WORKS -->
+                <div class="relative w-full rounded-2xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-4 border border-slate-800 shadow-xl space-y-3">
+                    <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <i class="fa-solid fa-list-check text-indigo-400 text-sm"></i>
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-200">How Anti-Kito Protection Works</h3>
+                    </div>
+
+                    <!-- Dropdown List Accordion -->
+                    <div class="space-y-2.5">
+                        <!-- Step 1 Dropdown -->
+                        <details class="group bg-slate-950/80 rounded-xl border border-slate-800 overflow-hidden transition-all open:border-indigo-500/50">
+                            <summary class="flex items-center justify-between p-3 cursor-pointer select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/60 text-indigo-300 flex items-center justify-center font-bold text-xs">
+                                        1
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-id-card text-indigo-400"></i> Government ID & Face Check
+                                    </span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-300"></i>
+                            </summary>
+                            <div class="px-3 pb-3 pt-1 text-[11px] text-slate-300 leading-relaxed border-t border-slate-800 space-y-2">
+                                <p class="text-justify">
+                                    When you verify your account, our system requires official government identity documents such as your <strong class="text-white">National Identification Number (NIN), Driver's License, or Voter's Card</strong>.
+                                </p>
+                                <p class="text-justify">
+                                    We also require a selfie holding a handwritten note saying <span class="text-indigo-300 italic">"Verify Me GBOI Community"</span>. Our AI compares this with your ID photo with a 90% match threshold to ensure secure and genuine onboarding.
+                                </p>
+                            </div>
+                        </details>
+
+                        <!-- Step 2 Dropdown -->
+                        <details class="group bg-slate-950/80 rounded-xl border border-slate-800 overflow-hidden transition-all open:border-indigo-500/50">
+                            <summary class="flex items-center justify-between p-3 cursor-pointer select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/60 text-indigo-300 flex items-center justify-center font-bold text-xs">
+                                        2
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-location-dot text-indigo-400"></i> Fill Meetup Parameters
+                                    </span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-300"></i>
+                            </summary>
+                            <div class="px-3 pb-3 pt-1 text-[11px] text-slate-300 leading-relaxed border-t border-slate-800 space-y-2">
+                                <p class="text-justify">
+                                    Before meeting, select whether you are visiting or hosting. Provide precise location details (street, building description, color, landmark), his direct phone number, and two emergency contact numbers.
+                                </p>
+                                <p class="text-justify">
+                                    Attach a photo or screenshot from your chat using the clip attachment icon to cross-reference against our private security database.
+                                </p>
+                            </div>
+                        </details>
+
+                        <!-- Step 3 Dropdown -->
+                        <details class="group bg-slate-950/80 rounded-xl border border-slate-800 overflow-hidden transition-all open:border-indigo-500/50">
+                            <summary class="flex items-center justify-between p-3 cursor-pointer select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/60 text-indigo-300 flex items-center justify-center font-bold text-xs">
+                                        3
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-clock text-indigo-400"></i> Start Timer Together
+                                    </span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-300"></i>
+                            </summary>
+                            <div class="px-3 pb-3 pt-1 text-[11px] text-slate-300 leading-relaxed border-t border-slate-800 space-y-2">
+                                <p class="text-justify">
+                                    <strong>Only start the timer when you are together in the room.</strong> The countdown runs actively while our satellite GPS tracks your live location for safety.
+                                </p>
+                                <p class="text-justify">
+                                    When the timer elapses, an alarm prompts you to enter your 6-digit deactivation PIN to verify you are safe and reset your session.
+                                </p>
+                            </div>
+                        </details>
+
+                        <!-- Step 4 Dropdown -->
+                        <details class="group bg-slate-950/80 rounded-xl border border-slate-800 overflow-hidden transition-all open:border-indigo-500/50">
+                            <summary class="flex items-center justify-between p-3 cursor-pointer select-none">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/60 text-indigo-300 flex items-center justify-center font-bold text-xs">
+                                        4
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Emergency Rescue & Justice
+                                    </span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-300"></i>
+                            </summary>
+                            <div class="px-3 pb-3 pt-1 text-[11px] text-slate-300 leading-relaxed border-t border-slate-800 space-y-2">
+                                <p class="text-justify">
+                                    If you fail to enter your PIN or if the grace period expires, an automated high-pitched alarm sounds and priority emergency alerts are immediately dispatched to your contacts and local law enforcement.
+                                </p>
+                                <p class="text-justify">
+                                    Our network of standby lawyers ensures that predators face swift, uncompromising legal action.
+                                </p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PHASE 3 ACTIVE MONITORING SCREEN -->
+            <div id="phase3-container" class="phase3-view absolute inset-0 z-40 overflow-hidden flex flex-col justify-between">
+                
+                <!-- FULL-SCREEN GOOGLE LIVE MAP BACKGROUND LAYER -->
+                <div class="absolute inset-0 z-0 w-full h-full">
+                    <div id="google-map-element" class="w-full h-full filter opacity-90 contrast-125"></div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-transparent to-slate-950/90 pointer-events-none z-[400]"></div>
+                </div>
+
+                <!-- FLOATING TOP BAR & MAP TRACKING BADGE -->
+                <div class="relative z-10 w-full px-4 pt-4 flex flex-col gap-2">
+                    <div class="self-start bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700 flex items-center gap-2 text-[10px] text-indigo-300 font-bold shadow-lg">
+                        <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+                        <span>Live GPS Satellite Tracking</span>
+                    </div>
+
+                    <div class="w-full flex items-center justify-between gap-3 p-2.5 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl flex-shrink-0">
+                        <div class="flex items-center gap-2 pl-2">
+                            <i class="fa-solid fa-clock text-indigo-400 text-sm"></i>
+                            <div class="flex flex-col">
+                                <span id="p3-status-label" class="text-[8px] uppercase tracking-wider text-slate-400 font-semibold">Ready</span>
+                                <span id="p3-timer-display" class="font-mono font-extrabold text-base text-slate-100 leading-none">05:00</span>
+                            </div>
+                        </div>
+
+                        <button id="p3-dynamic-action-btn" onclick="handlePhase3ActionButton()" class="h-[40px] px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all">
+                            <i id="p3-action-icon" class="fa-solid fa-play text-xs"></i>
+                            <span id="p3-action-text">Start Timer</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FLOATING BOTTOM SAFETY CHECK-IN CONTAINER -->
+                <div class="relative z-10 w-full px-4 pb-6 flex flex-col items-center justify-center flex-shrink-0">
+                    
+                    <div id="qa-board" class="w-full bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-[0_0_30px_rgba(0,0,0,0.9)] space-y-3 text-center">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                            <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                                <i class="fa-solid fa-shield-halved text-xs text-indigo-400"></i>
+                                Safety Monitor & Check-In
+                            </span>
+                            <span id="qa-status-tag" class="text-[9px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-600/50">READY TO START</span>
+                        </div>
+
+                        <p id="qa-question-text" class="text-[11px] font-bold text-slate-200 leading-snug">
+                            Timer is paused. Tap "Start Timer" when you are together in the room.
+                        </p>
+
+                        <div class="flex items-center gap-2 pt-0.5">
+                            <input type="password" id="p3-pass-input" maxlength="6" placeholder="Enter 6-digit pin" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-center text-slate-100 font-mono text-sm tracking-widest focus:outline-none focus:border-indigo-500 placeholder:text-slate-600 text-xs">
+                            <button onclick="handleCheckInSubmit()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all flex-shrink-0">
+                                Stop Alarm
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="sos-triggered-msg" class="hidden w-full bg-red-950/90 backdrop-blur-md border-2 border-red-500/80 rounded-2xl p-4 text-center shadow-[0_0_30px_rgba(239,68,68,0.5)] space-y-2 animate-bounce">
+                        <div class="flex items-center justify-center gap-2 text-red-400 font-black text-xs uppercase tracking-wider">
+                            <i class="fa-solid fa-shield-cat text-sm"></i>
+                            <span>EMERGENCY ALERT DISPATCHED</span>
+                        </div>
+                        <p class="text-xs font-black leading-relaxed text-white tracking-wide text-center">
+                            Don't let them intimidate you, don't act weak, predators love hurting weak people, defend yourself as much as possible, help is on the way, they will face justice regardless of whether they hurt you or not.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- CATEGORY SEGMENT SECTION (PHASE 1) -->
+            <section class="phase1-element relative px-4 z-20 flex-shrink-0 mb-1 -translate-y-16">
+                <div class="relative w-full">
+                    <svg class="absolute top-4 left-0 w-full h-4 pointer-events-none z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
+                        <line id="seg-line-1" x1="16.6" y1="5" x2="50" y2="5" class="segment-line" stroke-dasharray="33.4" stroke-dashoffset="33.4" />
+                        <line id="seg-line-2" x1="50" y1="5" x2="83.3" y2="5" class="segment-line" stroke-dasharray="33.4" stroke-dashoffset="33.4" />
+                    </svg>
+
+                    <div class="grid grid-cols-3 gap-1 text-center relative z-20">
+                        <div id="cat-1" class="category-item flex flex-col items-center">
+                            <div id="cat-badge-1" class="w-8 h-8 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center text-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)] mb-1 transition-all">
+                                <i class="fa-solid fa-id-badge text-[11px]"></i>
+                            </div>
+                            <span class="text-[9.5px] text-slate-300 font-medium leading-tight select-text">Identity &<br>Profile</span>
+                        </div>
+
+                        <div id="cat-2" class="category-item flex flex-col items-center">
+                            <div id="cat-badge-2" class="w-8 h-8 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center text-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)] mb-1 transition-all">
+                                <i class="fa-solid fa-map-location-dot text-[11px]"></i>
+                            </div>
+                            <span class="text-[9.5px] text-slate-300 font-medium leading-tight select-text">Location &<br>People</span>
+                        </div>
+
+                        <div id="cat-3" class="category-item flex flex-col items-center">
+                            <div id="cat-badge-3" class="w-8 h-8 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center text-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)] mb-1 transition-all">
+                                <i class="fa-solid fa-shield-heart text-[11px]"></i>
+                            </div>
+                            <span class="text-[9.5px] text-slate-300 font-medium leading-tight select-text">Safety &<br>Protection</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BOTTOM FOOTER SECTION -->
+            <footer class="phase1-element relative h-28 w-full flex flex-col justify-end items-center overflow-hidden flex-shrink-0">
+                <div class="perspective-container pointer-events-none">
+                    <div class="cyber-grid-3d"></div>
+                </div>
+
+                <div class="city-skyline flex items-end justify-center">
+                    <svg viewBox="0 0 1000 150" class="w-full h-full text-slate-900" preserveAspectRatio="none">
+                        <path fill="#020617" d="M0,150 L0,100 L30,100 L30,75 L50,75 L50,100 L90,100 L90,50 L120,50 L120,30 L130,15 L140,30 L140,50 L170,50 L170,100 L210,100 L210,65 L250,65 L250,100 L300,100 L300,40 L340,40 L340,100 L380,100 L380,60 L420,60 L420,100 L460,100 L460,25 L480,10 L500,25 L500,100 L550,100 L550,45 L590,45 L590,100 L640,100 L640,75 L680,75 L680,100 L730,100 L730,35 L770,35 L770,100 L820,100 L820,60 L870,60 L870,100 L920,100 L920,50 L960,50 L960,100 L1000,100 L1000,150 Z" />
+                        <rect x="35" y="85" width="4" height="6" fill="#818cf8" class="city-light" />
+                        <rect x="100" y="60" width="4" height="4" fill="#6366f1" class="city-light" />
+                        <rect x="108" y="72" width="4" height="4" fill="#818cf8" class="city-light" />
+                        <rect x="133" y="38" width="4" height="10" fill="#c7d2fe" class="city-light" />
+                        <rect x="310" y="55" width="5" height="5" fill="#6366f1" class="city-light" />
+                        <rect x="322" y="70" width="5" height="5" fill="#818cf8" class="city-light" />
+                        <rect x="470" y="40" width="4" height="6" fill="#c7d2fe" class="city-light" />
+                        <rect x="485" y="55" width="4" height="6" fill="#6366f1" class="city-light" />
+                    </svg>
+                </div>
+
+                <div id="scan-status-container" class="relative z-30 mb-2 flex items-center justify-center gap-2 text-xs font-medium text-slate-300 tracking-wide select-none pointer-events-none">
+                    <div class="spinner-dot-anim"></div>
+                    <span id="scan-text">0%</span>
+                </div>
+            </footer>
+
+            <!-- Bottom Navigation Bar -->
+            <footer class="bottom-nav bg-slate-900/90 backdrop-blur-md border-t border-slate-800/80 px-6 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shrink-0 flex items-center justify-between select-none z-30">
+              <a href="discover.html" onclick="event.preventDefault(); handleProtectedRoute('discover.html')" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition-colors">
+                <i class="fa-solid fa-compass text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">Discover</span>
+              </a>
+
+              <a href="protectme.html" onclick="event.preventDefault(); handleProtectedRoute('protectme.html')" class="flex flex-col items-center text-indigo-400 hover:text-indigo-300 transition-colors">
+                <i class="fa-solid fa-shield-halved text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">Protect Me</span>
+              </a>
+
+              <a href="threads.html" onclick="event.preventDefault(); handleProtectedRoute('threads.html')" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition-colors">
+                <i class="fa-solid fa-message text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">Chats</span>
+              </a>
+              
+              <a href="profiles.html" onclick="event.preventDefault(); handleProtectedRoute('profiles.html')" class="flex flex-col items-center text-slate-400 hover:text-slate-200 transition-colors">
+                <i class="fa-solid fa-user text-lg"></i>
+                <span class="text-[10px] font-medium mt-0.5">Profile</span>
+              </a>
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- DYNAMIC PROTECT ME / DEACTIVATION MOBILE MODAL -->
+    <div id="protect-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-end justify-center opacity-0 pointer-events-none">
+        <div id="protect-modal-content" class="w-full max-w-[480px] h-[85%] bg-slate-900 border-t border-slate-800 rounded-t-[32px] shadow-2xl flex flex-col transform translate-y-full transition-transform duration-300 ease-out">
+            
+            <!-- Modal Header -->
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <i id="modal-title-icon" class="fa-solid fa-shield-heart text-indigo-400"></i>
+                    <h3 id="modal-title-text" class="font-bold text-sm text-white tracking-wide">HWDYKHP Protection Form</h3>
+                </div>
+                <button onclick="closeProtectModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body Scroll Container -->
+            <div id="modal-body-container" class="flex-1 overflow-y-auto p-5 space-y-4 modal-scroll-content text-xs">
+                <!-- Content injected dynamically -->
+            </div>
+
+        </div>
+    </div>
+
+    <!-- SUPABASE CLIENT & APPLICATION CONTROLLER -->
+    <script>
+        const SUPABASE_URL = 'https://djryydilgqntazeibxch.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_Gu2BJqoYClKbb9xgqJuHuw_MtPk2d5I';
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let sessionUuid = localStorage.getItem('gboi_device_session');
+        if (!sessionUuid) {
+            sessionUuid = 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+            localStorage.setItem('gboi_device_session', sessionUuid);
+        }
+
+        function setAppViewportHeight() {
+            const vh = window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        }
+        window.addEventListener('resize', setAppViewportHeight);
+        window.addEventListener('orientationchange', setAppViewportHeight);
+        setAppViewportHeight();
+
+        const SCAN_DURATION = 5000;
+        const appContainer = document.getElementById('app-container');
+        const pentagonStroke = document.getElementById('pentagon-stroke');
+        
+        const nodes = [
+            document.getElementById('node-1'),
+            document.getElementById('node-2'),
+            document.getElementById('node-3'),
+            document.getElementById('node-4'),
+            document.getElementById('node-5')
+        ];
+        
+        const connectors = [
+            document.getElementById('conn-1'),
+            document.getElementById('conn-2'),
+            document.getElementById('conn-3'),
+            document.getElementById('conn-4'),
+            document.getElementById('conn-5')
+        ];
+        
+        const centerShield = document.getElementById('center-shield');
+        const cat1 = document.getElementById('cat-1');
+        const cat2 = document.getElementById('cat-2');
+        const cat3 = document.getElementById('cat-3');
+        const catBadges = [
+            document.getElementById('cat-badge-1'),
+            document.getElementById('cat-badge-2'),
+            document.getElementById('cat-badge-3')
+        ];
+        const segLine1 = document.getElementById('seg-line-1');
+        const segLine2 = document.getElementById('seg-line-2');
+        const scanText = document.getElementById('scan-text');
+
+        let totalStrokeLength = 618.3;
+        try {
+            totalStrokeLength = pentagonStroke.getTotalLength();
+        } catch (e) {
+            totalStrokeLength = 618.3;
+        }
+
+        let animationFrameReq = null;
+        let startTime = null;
+
+        function resetState() {
+            if (animationFrameReq) cancelAnimationFrame(animationFrameReq);
+            appContainer.classList.remove('phase-2-active', 'phase-3-active');
+            appContainer.classList.add('phase-1-active');
+            pentagonStroke.style.strokeDasharray = totalStrokeLength;
+            pentagonStroke.style.strokeDashoffset = totalStrokeLength;
+            nodes.forEach(n => {
+                n.setAttribute('transform', n.getAttribute('transform').replace(/scale\([^)]+\)/, 'scale(0)'));
+                n.setAttribute('opacity', '0');
+            });
+            connectors.forEach(c => c.style.opacity = '0');
+            centerShield.classList.remove('visible');
+            cat1.classList.remove('visible');
+            cat2.classList.remove('visible');
+            cat3.classList.remove('visible');
+            catBadges.forEach(b => {
+                b.className = "w-8 h-8 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center text-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)] mb-1 transition-all";
+            });
+            segLine1.style.strokeDashoffset = '33.4';
+            segLine2.style.strokeDashoffset = '33.4';
+            scanText.textContent = "0%";
+        }
+
+        function startAnimationSequence() {
+            resetState();
+            startTime = performance.now();
+            const nodeTimings = [0, 640, 1280, 1920, 2560];
+
+            function animate(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / SCAN_DURATION, 1.0);
+                const percentage = Math.floor(progress * 100);
+
+                if (progress < 1.0) {
+                    if (percentage < 20) scanText.textContent = `${percentage}%\nChecking your profile...`;
+                    else if (percentage < 40) scanText.textContent = `${percentage}%\nChecking your location...`;
+                    else if (percentage < 60) scanText.textContent = `${percentage}%\nFinding nearby lawyers...`;
+                    else if (percentage < 80) scanText.textContent = `${percentage}%\nChecking safety settings...`;
+                    else scanText.textContent = `${percentage}%\nChecking your connection...`;
+                } else {
+                    scanText.textContent = "Scan completed.";
+                    setTimeout(() => {
+                        appContainer.classList.remove('phase-1-active');
+                        appContainer.classList.add('phase-2-active');
+                    }, 400);
+                }
+
+                const pentagonProgress = Math.min(elapsed / 3200, 1.0);
+                pentagonStroke.style.strokeDashoffset = totalStrokeLength * (1 - pentagonProgress);
+
+                nodeTimings.forEach((targetTime, idx) => {
+                    if (elapsed >= targetTime) {
+                        const baseTransform = nodes[idx].getAttribute('transform').split('scale')[0];
+                        nodes[idx].setAttribute('transform', `${baseTransform}scale(1)`);
+                        nodes[idx].setAttribute('opacity', '1');
+                    }
+                });
+
+                if (elapsed >= 3200) {
+                    centerShield.classList.add('visible');
+                    connectors.forEach(c => c.style.opacity = '1');
+                }
+
+                if (elapsed >= 3200) {
+                    cat1.classList.add('visible');
+                    catBadges[0].className = "w-8 h-8 rounded-full bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center text-white shadow-[0_0_12px_rgba(99,102,241,0.7)] mb-1 transition-all";
+                }
+                if (elapsed >= 3400) segLine1.style.strokeDashoffset = 33.4 * (1 - Math.min((elapsed - 3400) / 400, 1.0));
+                if (elapsed >= 3800) {
+                    cat2.classList.add('visible');
+                    catBadges[1].className = "w-8 h-8 rounded-full bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center text-white shadow-[0_0_12px_rgba(99,102,241,0.7)] mb-1 transition-all";
+                }
+                if (elapsed >= 4000) segLine2.style.strokeDashoffset = 33.4 * (1 - Math.min((elapsed - 4000) / 400, 1.0));
+                if (elapsed >= 4400) {
+                    cat3.classList.add('visible');
+                    catBadges[2].className = "w-8 h-8 rounded-full bg-indigo-500 border-2 border-indigo-300 flex items-center justify-center text-white shadow-[0_0_12px_rgba(99,102,241,0.7)] mb-1 transition-all";
+                }
+
+                if (progress < 1.0) animationFrameReq = requestAnimationFrame(animate);
+            }
+            animationFrameReq = requestAnimationFrame(animate);
+        }
+
+        function toggleLocationFields(type) {
+            const vBox = document.getElementById('visiting-location-box');
+            const hBox = document.getElementById('hosting-location-box');
+            const dotV = document.getElementById('dot-visiting');
+            const dotH = document.getElementById('dot-hosting');
+
+            if (type === 'hosting') {
+                if (vBox) vBox.classList.add('hidden');
+                if (hBox) hBox.classList.remove('hidden');
+                if (dotV) dotV.classList.add('opacity-0');
+                if (dotH) dotH.classList.remove('opacity-0');
+            } else {
+                if (hBox) hBox.classList.add('hidden');
+                if (vBox) vBox.classList.remove('hidden');
+                if (dotH) dotH.classList.add('opacity-0');
+                if (dotV) dotV.classList.remove('opacity-0');
+            }
+        }
+
+        function togglePasswordVisibility(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        const protectModal = document.getElementById('protect-modal');
+        const protectModalContent = document.getElementById('protect-modal-content');
+        const modalBodyContainer = document.getElementById('modal-body-container');
+        const modalTitleIcon = document.getElementById('modal-title-icon');
+        const modalTitleText = document.getElementById('modal-title-text');
+
+        let modalMode = 'protect';
+
+        function openProtectModal(mode = 'protect') {
+            modalMode = mode;
+            
+            if (mode === 'deactivate') {
+                protectModalContent.classList.remove('border-slate-800');
+                protectModalContent.classList.add('border-red-500/80');
+
+                modalTitleIcon.className = "fa-solid fa-lock text-red-500 text-base";
+                modalTitleText.textContent = "Deactivate Protection Radar";
+                
+                modalBodyContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center pt-6 pb-2 text-center space-y-4">
+                        <div class="w-16 h-16 rounded-full bg-red-950/80 border-2 border-red-500/60 flex items-center justify-center text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                            <i class="fa-solid fa-lock text-2xl"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h4 class="text-sm font-extrabold text-white">Security Authentication</h4>
+                            <p class="text-[11px] text-slate-400">Enter your 6-digit PIN to confirm deactivation.</p>
+                        </div>
+                        
+                        <div class="w-full pt-2 relative">
+                            <input type="password" id="modal-deactivate-pass" maxlength="6" placeholder="******" 
+                                class="w-full bg-slate-950 border border-red-800/60 rounded-xl p-3 text-center text-red-100 font-mono text-base tracking-widest focus:outline-none focus:border-red-500 placeholder:text-slate-600">
+                        </div>
+
+                        <button onclick="submitProtectForm()" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all">
+                            Confirm Deactivate
+                        </button>
+                    </div>
+                `;
+            } else {
+                protectModalContent.classList.remove('border-red-500/80');
+                protectModalContent.classList.add('border-slate-800');
+
+                modalTitleIcon.className = "fa-solid fa-shield-heart text-indigo-400";
+                modalTitleText.textContent = "HWDYKHP Protection Form";
+
+                modalBodyContainer.innerHTML = `
+                    <div class="bg-gradient-to-r from-amber-950/70 to-slate-900 border border-amber-500/40 p-3 rounded-xl space-y-2 text-[11px] text-slate-200 leading-relaxed shadow-inner">
+                        <div class="flex items-center gap-2 font-bold text-amber-400 text-xs uppercase tracking-wide">
+                            <i class="fa-solid fa-circle-exclamation text-sm"></i>
+                            <span>Important Safety Instructions</span>
+                        </div>
+                        <p class="text-justify">
+                            <strong>Only start the timer when you are actually together in the room.</strong>
+                        </p>
+                    </div>
+
+                    <div class="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">1. Are you visiting him or hosting him?</label>
+                        <div class="grid grid-cols-2 gap-2 mt-1">
+                            <label class="role-option-card">
+                                <input type="radio" name="user_role" value="visiting" class="hidden" checked onchange="toggleLocationFields('visiting')">
+                                <div class="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center flex-shrink-0">
+                                    <div class="w-2 h-2 rounded-full bg-indigo-400 role-dot" id="dot-visiting"></div>
+                                </div>
+                                <div class="role-content text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-person-walking text-xs text-indigo-400"></i>
+                                    <span>Visiting Him</span>
+                                </div>
+                            </label>
+
+                            <label class="role-option-card">
+                                <input type="radio" name="user_role" value="hosting" class="hidden" onchange="toggleLocationFields('hosting')">
+                                <div class="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center flex-shrink-0">
+                                    <div class="w-2 h-2 rounded-full bg-indigo-400 opacity-0 role-dot" id="dot-hosting"></div>
+                                </div>
+                                <div class="role-content text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-house-user text-xs text-indigo-400"></i>
+                                    <span>Hosting Him</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="visiting-location-box" class="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">2. Enter the meeting address / location:</label>
+                        <textarea id="form-location-visiting" rows="2" placeholder="Street name, house number, building description, or hotel address..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 text-xs focus:outline-none focus:border-indigo-500 placeholder:text-slate-500"></textarea>
+                    </div>
+
+                    <div id="hosting-location-box" class="hidden space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">2. Enter your exact hosting address:</label>
+                        <textarea id="form-location-hosting" rows="2" placeholder="Your exact host address, house number, street, and landmark..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 text-xs focus:outline-none focus:border-indigo-500 placeholder:text-slate-500"></textarea>
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">3. Enter his direct phone number:</label>
+                        <input type="tel" id="form-phone" placeholder="Paste his direct phone number here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 text-xs focus:outline-none focus:border-indigo-500 placeholder:text-slate-500">
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">4. Enter emergency contact 1 (Closest person):</label>
+                        <input type="tel" id="form-emergency-1" placeholder="Contact 1 Phone Number (e.g. 080...)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 text-xs focus:outline-none focus:border-indigo-500 placeholder:text-slate-500">
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">5. Enter emergency contact 2:</label>
+                        <input type="tel" id="form-emergency-2" placeholder="Contact 2 Phone Number (e.g. 090...)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 text-xs focus:outline-none focus:border-indigo-500 placeholder:text-slate-500">
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">6. Upload a photo or screenshot of him:</label>
+                        <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg p-2.5 cursor-pointer hover:bg-slate-800 relative">
+                            <input type="file" id="form-photo-file" accept="image/*" onchange="handleFileSelection(this)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                            <i class="fa-solid fa-paperclip text-indigo-400 text-sm"></i>
+                            <span id="photo-file-label" class="text-[11px] text-slate-300 truncate">Attach image file (&lt; 6MB)</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="font-bold text-slate-200 text-[11px]">7. Enable Live Satellite Location Tracking?</span>
+                        <input type="checkbox" id="form-track-enabled" class="w-4 h-4 accent-indigo-600 rounded" checked>
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block font-bold text-slate-200 text-[11px]">8. Create one Deactivation password (6 digits):</label>
+                        <div class="relative">
+                            <input type="password" id="user-real-pass" maxlength="6" placeholder="Enter 6-digit PIN" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 pr-9 text-slate-100 text-xs tracking-widest focus:outline-none focus:border-indigo-500 placeholder:text-slate-500">
+                            <button type="button" onclick="togglePasswordVisibility('user-real-pass', 'pass-toggle-icon')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-indigo-300 p-1">
+                                <i id="pass-toggle-icon" class="fa-solid fa-eye text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-1 pb-2 flex items-start gap-2.5">
+                        <input type="checkbox" id="policy-agree" class="mt-0.5 w-4 h-4 accent-indigo-600 rounded flex-shrink-0">
+                        <label for="policy-agree" class="text-[11px] text-slate-300 leading-snug cursor-pointer">
+                            I have read and agree to the <strong class="text-indigo-300">HWDYKHP policy</strong> and statutory safety terms.
+                        </label>
+                    </div>
+
+                    <button id="modal-submit-btn" onclick="submitProtectForm()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs tracking-wide shadow-lg active:scale-95 transition-all">
+                        Activate Protection Radar
+                    </button>
+                `;
+            }
+
+            protectModal.classList.remove('opacity-0', 'pointer-events-none');
+            protectModalContent.classList.remove('translate-y-full');
+        }
+
+        function closeProtectModal() {
+            protectModalContent.classList.add('translate-y-full');
+            protectModal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        let selectedFileObj = null;
+        function handleFileSelection(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (file.size > 6 * 1024 * 1024) {
+                    alert('File size exceeds 6MB limit. Please select a smaller image.');
+                    input.value = '';
+                    selectedFileObj = null;
+                    document.getElementById('photo-file-label').textContent = "Attach image file (< 6MB)";
+                    return;
+                }
+                selectedFileObj = file;
+                document.getElementById('photo-file-label').textContent = file.name;
+            }
+        }
+
+        async function submitProtectForm() {
+            if (modalMode === 'deactivate') {
+                const deactivatePass = document.getElementById('modal-deactivate-pass').value.trim();
+                await verifyAndDeactivateModal(deactivatePass);
+                return;
+            }
+
+            const userPass = document.getElementById('user-real-pass').value.trim();
+            const agreeCheckbox = document.getElementById('policy-agree');
+            const role = document.querySelector('input[name="user_role"]:checked').value;
+            const locationDetail = role === 'hosting' ? document.getElementById('form-location-hosting').value.trim() : document.getElementById('form-location-visiting').value.trim();
+            const phoneNum = document.getElementById('form-phone').value.trim();
+            const emergency1 = document.getElementById('form-emergency-1').value.trim();
+            const emergency2 = document.getElementById('form-emergency-2').value.trim();
+
+            if (!agreeCheckbox.checked || !locationDetail || !phoneNum || !emergency1 || !emergency2 || userPass.length !== 6) {
+                alert('Mandatory Requirement: You must answer all questions, provide all required numbers, and enter a valid 6-digit PIN before monitoring can start.');
+                return;
+            }
+
+            let photoUrl = '';
+            if (selectedFileObj) {
+                const fileExt = selectedFileObj.name.split('.').pop();
+                const fileName = `${sessionUuid}_${Date.now()}.${fileExt}`;
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('avatars')
+                    .upload(fileName, selectedFileObj);
+
+                if (!uploadError) {
+                    const { data: publicUrlData } = supabaseClient.storage
+                        .from('avatars')
+                        .getPublicUrl(fileName);
+                    photoUrl = publicUrlData.publicUrl;
+                }
+            }
+
+            const formData = {
+                role: role,
+                location: locationDetail,
+                phone_number: phoneNum,
+                emergency_contact_1: emergency1,
+                emergency_contact_2: emergency2,
+                photo_url: photoUrl,
+                track_enabled: document.getElementById('form-track-enabled').checked
+            };
+
+            let initialLat = 6.5244;
+            let initialLng = 3.3792;
+            
+            if (navigator.geolocation) {
+                try {
+                    const pos = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+                    });
+                    initialLat = pos.coords.latitude;
+                    initialLng = pos.coords.longitude;
+                } catch(e) {}
+            }
+
+            const { error } = await supabaseClient
+                .from('nny_holding')
+                .upsert({
+                    device_session_id: sessionUuid,
+                    form_data: formData,
+                    deactivation_password: userPass,
+                    last_latitude: initialLat,
+                    last_longitude: initialLng,
+                    phase3_active: true,
+                    timer_remaining: 300,
+                    countdown_cycle: 0,
+                    updated_at: new Date()
+                }, { onConflict: 'device_session_id' });
+
+            if (error) {
+                alert('Database Error: ' + error.message);
+                return;
+            }
+
+            closeProtectModal();
+            initPhase3(userPass, formData, initialLat, initialLng);
+        }
+
+        let DEFAULT_SECONDS = 300; 
+        let p3RemainingSeconds = DEFAULT_SECONDS;
+        let p3TimerInterval = null;
+        let gpsTrackingInterval = null;
+        let lastSentLat = null;
+        let lastSentLng = null;
+        let currentDeactivationPass = "";
+        let currentFormData = {};
+        
+        let audioCtx = null;
+        let beepOscillator = null;
+        let isBeeping = false;
+        let activeCountdownCycle = 0;
+        let googleMap = null;
+        let googleMarker = null;
+        let isTimerRunning = false;
+
+        async function initPhase3(pass, formData, lat, lng) {
+            currentDeactivationPass = pass;
+            currentFormData = formData;
+            lastSentLat = lat;
+            lastSentLng = lng;
+            p3RemainingSeconds = DEFAULT_SECONDS;
+            activeCountdownCycle = 0;
+            isTimerRunning = false;
+            
+            updateTimerDisplay();
+            appContainer.classList.remove('phase-1-active', 'phase-2-active');
+            appContainer.classList.add('phase-3-active');
+
+            initGoogleMap(lat, lng);
+            start10sSatelliteMapTracking();
+            resetDynamicActionButtonToStart();
+        }
+
+        function resetDynamicActionButtonToStart() {
+            isTimerRunning = false;
+            const btn = document.getElementById('p3-dynamic-action-btn');
+            const icon = document.getElementById('p3-action-icon');
+            const text = document.getElementById('p3-action-text');
+
+            btn.className = "h-[40px] px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all";
+            icon.className = "fa-solid fa-play text-xs";
+            text.textContent = "Start Timer";
+            
+            document.getElementById('p3-status-label').textContent = "Ready";
+            document.getElementById('qa-status-tag').textContent = "READY TO START";
+            document.getElementById('qa-status-tag').className = "text-[9px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-600/50";
+            document.getElementById('qa-question-text').textContent = "Timer is paused. Tap \"Start Timer\" when you are together in the room.";
+        }
+
+        function setDynamicActionButtonToDeactivate() {
+            isTimerRunning = true;
+            const btn = document.getElementById('p3-dynamic-action-btn');
+            const icon = document.getElementById('p3-action-icon');
+            const text = document.getElementById('p3-action-text');
+
+            btn.className = "h-[40px] px-5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all";
+            icon.className = "fa-solid fa-power-off text-xs";
+            text.textContent = "Deactivate";
+
+            document.getElementById('p3-status-label').textContent = "Activated";
+            document.getElementById('qa-status-tag').textContent = "ACTIVE MONITORING";
+            document.getElementById('qa-status-tag').className = "text-[9px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-600/50";
+            document.getElementById('qa-question-text').textContent = "Are you safe? Please enter your 6-digit PIN to stop the alarm.";
+        }
+
+        function handlePhase3ActionButton() {
+            if (!isTimerRunning) {
+                setDynamicActionButtonToDeactivate();
+                startPhase3Countdown();
+            } else {
+                openProtectModal('deactivate');
+            }
+        }
+
+        function initGoogleMap(lat, lng) {
+            const mapContainerEl = document.getElementById('google-map-element');
+            const pos = { lat: lat, lng: lng };
+            
+            if (googleMap) {
+                googleMap.setCenter(pos);
+                if (googleMarker) googleMarker.setPosition(pos);
+                return;
+            }
+
+            if (window.google && window.google.maps) {
+                try {
+                    googleMap = new google.maps.Map(mapContainerEl, {
+                        center: pos,
+                        zoom: 17,
+                        disableDefaultUI: true,
+                        mapTypeId: 'roadmap',
+                        styles: [
+                            { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
+                            { elementType: "labels.text.stroke", stylers: [{ color: "#0f172a" }] },
+                            { elementType: "labels.text.fill", stylers: [{ color: "#818cf8" }] },
+                            { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#6366f1" }] },
+                            { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#4f46e5" }] },
+                            { featureType: "road", elementType: "geometry", stylers: [{ color: "#1e293b" }] },
+                            { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#334155" }] },
+                            { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#312e81" }] },
+                            { featureType: "water", elementType: "geometry", stylers: [{ color: "#020617" }] }
+                        ]
+                    });
+
+                    googleMarker = new google.maps.Marker({
+                        position: pos,
+                        map: googleMap,
+                        title: "Active Tracking Location"
+                    });
+                } catch (e) {
+                    renderMapFallback(mapContainerEl, lat, lng);
+                }
+            } else {
+                renderMapFallback(mapContainerEl, lat, lng);
+            }
+        }
+
+        function renderMapFallback(container, lat, lng) {
+            container.innerHTML = `
+                <div class="w-full h-full flex flex-col items-center justify-center bg-slate-900 p-6 text-center space-y-2">
+                    <i class="fa-solid fa-map-location-dot text-indigo-400 text-3xl animate-bounce"></i>
+                    <p class="text-xs font-bold text-white">Live Satellite Coordinates Active</p>
+                    <p class="text-[10px] text-indigo-300/80 font-mono">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</p>
+                    <span class="text-[9px] bg-slate-950 text-indigo-400 border border-indigo-500/40 px-2.5 py-1 rounded-full">GPS Radar Link Secure</span>
+                </div>
+            `;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            setAppViewportHeight();
+
+            if (sessionUuid) {
+                const { data, error } = await supabaseClient
+                    .from('nny_holding')
+                    .select('*')
+                    .eq('device_session_id', sessionUuid)
+                    .single();
+
+                if (data && data.phase3_active) {
+                    currentDeactivationPass = data.deactivation_password;
+                    currentFormData = data.form_data;
+                    p3RemainingSeconds = data.timer_remaining || 300;
+                    activeCountdownCycle = data.countdown_cycle || 0;
+                    lastSentLat = data.last_latitude;
+                    lastSentLng = data.last_longitude;
+
+                    appContainer.classList.remove('phase-1-active', 'phase-2-active');
+                    appContainer.classList.add('phase-3-active');
+                    updateTimerDisplay();
+                    initGoogleMap(lastSentLat, lastSentLng);
+                    start10sSatelliteMapTracking();
+                    
+                    setDynamicActionButtonToDeactivate();
+                    startPhase3Countdown();
+
+                    if (p3RemainingSeconds <= 0) {
+                        triggerInfiniteHighBeep();
+                        startEmergencyGraceCountdown(true);
+                    }
+                } else {
+                    startAnimationSequence();
+                }
+            } else {
+                startAnimationSequence();
+            }
+        });
+
+        function start10sSatelliteMapTracking() {
+            if (gpsTrackingInterval) clearInterval(gpsTrackingInterval);
+
+            gpsTrackingInterval = setInterval(async () => {
+                if (!navigator.geolocation) return;
+                
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const newLat = position.coords.latitude;
+                    const newLng = position.coords.longitude;
+                    const newPos = { lat: newLat, lng: newLng };
+
+                    if (googleMap && googleMarker) {
+                        googleMap.setCenter(newPos);
+                        googleMarker.setPosition(newPos);
+                    }
+
+                    if (lastSentLat === null || lastSentLng === null || Math.abs(newLat - lastSentLat) > 0.00001 || Math.abs(newLng - lastSentLng) > 0.00001) {
+                        lastSentLat = newLat;
+                        lastSentLng = newLng;
+
+                        await supabaseClient
+                            .from('nny_holding')
+                            .update({
+                                last_latitude: newLat,
+                                last_longitude: newLng,
+                                updated_at: new Date()
+                            })
+                            .eq('device_session_id', sessionUuid);
+                    }
+                }, () => {}, { timeout: 5000 });
+            }, 10000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(p3RemainingSeconds / 60);
+            const secs = p3RemainingSeconds % 60;
+            const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            document.getElementById('p3-timer-display').textContent = formatted;
+        }
+
+        function startPhase3Countdown() {
+            if (p3TimerInterval) clearInterval(p3TimerInterval);
+            
+            p3TimerInterval = setInterval(async () => {
+                if (p3RemainingSeconds > 0) {
+                    p3RemainingSeconds--;
+                    updateTimerDisplay();
+                    
+                    if (p3RemainingSeconds % 10 === 0) {
+                        await supabaseClient
+                            .from('nny_holding')
+                            .update({ timer_remaining: p3RemainingSeconds })
+                            .eq('device_session_id', sessionUuid);
+                    }
+                } else {
+                    clearInterval(p3TimerInterval);
+                    triggerInfiniteHighBeep();
+                    startEmergencyGraceCountdown(false);
+                }
+            }, 1000);
+        }
+
+        function startEmergencyGraceCountdown(isResumed = false) {
+            if (!isResumed) {
+                p3RemainingSeconds = 300;
+            }
+            updateTimerDisplay();
+            document.getElementById('qa-question-text').textContent = "Alarm active! Enter your 6-digit PIN within 5 minutes to stop the alarm.";
+
+            if (p3TimerInterval) clearInterval(p3TimerInterval);
+            p3TimerInterval = setInterval(async () => {
+                if (p3RemainingSeconds > 0) {
+                    p3RemainingSeconds--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(p3TimerInterval);
+                    stopInfiniteBeep();
+                    await transferToEmergencyTable("Timer & grace period expired without alarm stop");
+                }
+            }, 1000);
+        }
+
+        async function verifyAndDeactivateModal(inputVal) {
+            if (!inputVal || inputVal.length !== 6) {
+                alert("Please enter a valid 6-digit PIN.");
+                return;
+            }
+
+            const { data: emergencyMatch } = await supabaseClient
+                .from('emergencypassword')
+                .select('*')
+                .eq('emergency_code', inputVal)
+                .single();
+
+            if (emergencyMatch) {
+                stopInfiniteBeep();
+                if (p3TimerInterval) clearInterval(p3TimerInterval);
+                if (gpsTrackingInterval) clearInterval(gpsTrackingInterval);
+                closeProtectModal();
+                await transferToEmergencyTable("Emergency password entered on deactivation: " + inputVal);
+                return;
+            }
+
+            if (inputVal !== currentDeactivationPass) {
+                alert("Incorrect password.");
+                return;
+            }
+
+            stopInfiniteBeep();
+            if (p3TimerInterval) clearInterval(p3TimerInterval);
+            if (gpsTrackingInterval) clearInterval(gpsTrackingInterval);
+
+            await supabaseClient
+                .from('nny_holding')
+                .delete()
+                .eq('device_session_id', sessionUuid);
+
+            closeProtectModal();
+            appContainer.classList.remove('phase-3-active', 'phase-1-active');
+            appContainer.classList.add('phase-2-active');
+        }
+
+        function triggerInfiniteHighBeep() {
+            if (isBeeping) return;
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return;
+                
+                audioCtx = new AudioContextClass();
+                beepOscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                beepOscillator.type = 'sine';
+                beepOscillator.frequency.setValueAtTime(2800, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.9, audioCtx.currentTime);
+
+                beepOscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                beepOscillator.start();
+                isBeeping = true;
+            } catch (e) {}
+        }
+
+        function stopInfiniteBeep() {
+            if (beepOscillator) {
+                try { beepOscillator.stop(); } catch(e){}
+                beepOscillator = null;
+            }
+            if (audioCtx) {
+                try { audioCtx.close(); } catch(e){}
+                audioCtx = null;
+            }
+            isBeeping = false;
+        }
+
+        async function handleCheckInSubmit() {
+            const inputVal = document.getElementById('p3-pass-input').value.trim();
+
+            if (!inputVal || inputVal.length !== 6) {
+                alert("Please enter a valid 6-digit PIN.");
+                return;
+            }
+
+            const { data: emergencyMatch } = await supabaseClient
+                .from('emergencypassword')
+                .select('*')
+                .eq('emergency_code', inputVal)
+                .single();
+
+            if (emergencyMatch) {
+                stopInfiniteBeep();
+                if (p3TimerInterval) clearInterval(p3TimerInterval);
+                if (gpsTrackingInterval) clearInterval(gpsTrackingInterval);
+                await transferToEmergencyTable("Emergency password entered in stop alarm: " + inputVal);
+                return;
+            }
+
+            if (inputVal !== currentDeactivationPass) {
+                alert("Incorrect PIN.");
+                return;
+            }
+
+            stopInfiniteBeep();
+
+            activeCountdownCycle++;
+            if (activeCountdownCycle === 1) {
+                p3RemainingSeconds = 30 * 60;
+            } else {
+                p3RemainingSeconds = 60 * 60;
+            }
+
+            await supabaseClient
+                .from('nny_holding')
+                .update({
+                    timer_remaining: p3RemainingSeconds,
+                    countdown_cycle: activeCountdownCycle,
+                    updated_at: new Date()
+                })
+                .eq('device_session_id', sessionUuid);
+
+            document.getElementById('qa-question-text').textContent = "Alarm stopped! Timer successfully reset for the next countdown cycle.";
+            document.getElementById('p3-pass-input').value = "";
+
+            startPhase3Countdown();
+        }
+
+        async function transferToEmergencyTable(reason) {
+            stopInfiniteBeep();
+            if (p3TimerInterval) clearInterval(p3TimerInterval);
+            if (gpsTrackingInterval) clearInterval(gpsTrackingInterval);
+
+            await supabaseClient
+                .from('emergency_table')
+                .insert({
+                    device_session_id: sessionUuid,
+                    form_data: currentFormData,
+                    last_latitude: lastSentLat,
+                    last_longitude: lastSentLng,
+                    trigger_reason: reason
+                });
+
+            await supabaseClient
+                .from('nny_holding')
+                .delete()
+                .eq('device_session_id', sessionUuid);
+
+            document.getElementById('qa-board').classList.add('hidden');
+            document.getElementById('sos-triggered-msg').classList.remove('hidden');
+        }
+          // Load saved theme on initial page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('user-app-theme') || 'twilight';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      const selector = document.getElementById('themeSelector');
+      if (selector) selector.value = savedTheme;
+    });
+    </script>
+</body>
+</html>
