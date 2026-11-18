@@ -1,0 +1,249 @@
+/* ==========================================================================
+   CLEAN, NON-GLASS, LOW-SATURATION WEATHER ATMOSPHERE SYSTEM
+   ========================================================================== */
+
+/* 1. TWILIGHT AURORA */
+:root,
+[data-theme="twilight"] {
+  /* Ultra-faint background atmosphere */
+  --app-bg-gradient: radial-gradient(circle at 50% 20%, #100b1a 0%, #08050e 70%, #030206 100%);
+
+  /* Rich solid containers with minimal weather tint */
+  --bg-container: #171322;
+  --bg-container-hover: #201b2e;
+  --bg-inset: #0e0b16;
+  --bg-header-footer: #120e1c;
+
+  /* Strict clean white & soft silver text */
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  /* Accents */
+  --accent-primary: #581c87;
+  --accent-hover: #4c1d95;
+  --accent-text: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-bright: #581c87;
+}
+
+/* 2. AUTUMN DUSK */
+[data-theme="autumn"] {
+  --app-bg-gradient: radial-gradient(circle at 50% 20%, #14090a 0%, #0a0405 70%, #030102 100%);
+
+  --bg-container: #1f1213;
+  --bg-container-hover: #2b1a1c;
+  --bg-inset: #130a0b;
+  --bg-header-footer: #190e0f;
+
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  --accent-primary: #852e12;
+  --accent-hover: #7c2d12;
+  --accent-text: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-bright: #7c2d12;
+}
+
+/* 3. MISTY PINE FOREST */
+[data-theme="pine-forest"] {
+  --app-bg-gradient: radial-gradient(circle at 50% 20%, #081210 0%, #040a08 70%, #010302 100%);
+
+  --bg-container: #101c19;
+  --bg-container-hover: #172723;
+  --bg-inset: #091210;
+  --bg-header-footer: #0c1714;
+
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  --accent-primary: #14532d;
+  --accent-hover: #114224;
+  --accent-text: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-bright: #14532d;
+}
+
+/* 4. DESERT SUNSET */
+[data-theme="desert-sunset"] {
+  --app-bg-gradient: radial-gradient(circle at 50% 20%, #160b0e 0%, #0a0406 70%, #030102 100%);
+
+  --bg-container: #211316;
+  --bg-container-hover: #2e1a1e;
+  --bg-inset: #140a0d;
+  --bg-header-footer: #190e11;
+
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  --accent-primary: #881337;
+  --accent-hover: #700f2d;
+  --accent-text: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-bright: #881337;
+}
+
+/* 5. ARCTIC POLAR NIGHT */
+[data-theme="arctic"] {
+  --app-bg-gradient: radial-gradient(circle at 50% 20%, #0a0f1d 0%, #050810 70%, #020306 100%);
+
+  --bg-container: #131929;
+  --bg-container-hover: #1a2238;
+  --bg-inset: #0b101c;
+  --bg-header-footer: #0f1422;
+
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  --accent-primary: #1e3a8a;
+  --accent-hover: #172e6d;
+  --accent-text: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-bright: #1e3a8a;
+}
+
+/* 6. MONSOON RAIN & CLAY */
+[data-theme="monsoon"] {
+  --app-bg-gradient: radial-gradient(circle at 50% 20%, #081112 0%, #04090a 70%, #010303 100%);
+
+  --bg-container: #111e20;
+  --bg-container-hover: #172a2c;
+  --bg-inset: #0a1314;
+  --bg-header-footer: #0e181a;
+
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  --accent-primary: #134e4a;
+  --accent-hover: #0f3f3c;
+  --accent-text: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-bright: #134e4a;
+}
+
+/* ==========================================================================
+   CLEAN OVERRIDES & SCREEN BORDER REMOVAL
+   ========================================================================== */
+
+/* Remove Outer Screen Borders / Fences completely */
+.border-x,
+.sm\:border-x,
+.border-slate-800\/80 {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Page Outer Background */
+body,
+.bg-slate-950 {
+  background: var(--app-bg-gradient) !important;
+  background-attachment: fixed !important;
+  color: var(--text-primary) !important;
+  min-height: 100vh;
+}
+
+/* Solid Containers & Cards */
+.bg-slate-900,
+.bg-slate-900\/90,
+.bg-slate-900\/80 {
+  background-color: var(--bg-container) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Inset Elements (Inputs & Inner Containers) */
+.bg-slate-950\/60,
+.bg-slate-950\/70,
+.bg-slate-950\/80,
+.bg-slate-950\/90,
+.bg-slate-950 {
+  background-color: var(--bg-inset) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Clickable Rows & Interactive Cards */
+.bg-slate-800,
+.bg-slate-800\/60,
+.bg-slate-800\/80 {
+  background-color: var(--bg-container-hover) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Scoped Main Structural Header and Footer (Protects modal headers and layout subcomponents) */
+body > main > header,
+body > main > footer,
+#app-container > header,
+#app-container > footer {
+  background-color: var(--bg-header-footer) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* High Contrast Black / White / Gray Typography */
+.text-slate-100,
+.text-white {
+  color: var(--text-primary) !important;
+}
+
+.text-slate-200,
+.text-slate-300,
+.text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+
+.text-slate-500,
+.text-slate-600 {
+  color: var(--text-muted) !important;
+}
+
+/* Primary Action Buttons */
+.bg-indigo-600,
+.bg-brand-600 {
+  background-color: var(--accent-primary) !important;
+  color: var(--accent-text) !important;
+  border: 1px solid var(--border-bright) !important;
+}
+
+.hover\:bg-indigo-500:hover,
+.hover\:bg-brand-500:hover {
+  background-color: var(--accent-hover) !important;
+}
+
+.text-indigo-400,
+.text-indigo-300,
+.text-brand-500 {
+  color: var(--text-secondary) !important;
+}
+
+/* Subtle Borders */
+.border-slate-800,
+.border-slate-800\/80,
+.border-slate-800\/60,
+.border-slate-800\/50,
+.border-slate-700,
+.border-slate-700\/60 {
+  border-color: var(--border-color) !important;
+}
+
+/* Transitions */
+div, header, footer, button, input, select, textarea {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+/* Completely remove the desktop app wrapper frame & side borders */
+.max-w-\[480px\] {
+  border-left: none !important;
+  border-right: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
