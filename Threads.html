@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Connect with Friends - Chat</title>
+
+  <!-- CRITICAL: Prevent Theme Glitch/Flash by applying theme immediately BEFORE render -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('user-app-theme') || 'twilight';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="theme.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Supabase JS SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              500: '#6366f1',
+              600: '#4f46e5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 10px;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Message mask gradient effect for sticky seamless header fading */
+    .fade-scroll-mask {
+      mask-image: linear-gradient(to bottom, transparent 0px, black 64px, black calc(100% - 10px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 64px, black calc(100% - 10px), transparent 100%);
+    }
+
+    /* Shorter, low-opacity wave line pulse animation for audio recording */
+    @keyframes shortWavePulse {
+      0%, 100% { transform: scaleX(0.6); opacity: 0.25; }
+      50% { transform: scaleX(1.0); opacity: 0.5; }
+    }
+    .animate-short-wave {
+      animation: shortWavePulse 0.9s ease-in-out infinite;
+    }
+
+    /* Upward double arrow animation for lock guidance */
+    @keyframes doubleArrowBounce {
+      0%, 100% { transform: translateY(0); opacity: 0.4; }
+      50% { transform: translateY(-4px); opacity: 1; }
+    }
+    .animate-double-arrow {
+      animation: doubleArrowBounce 0.8s ease-in-out infinite;
+    }
+
+    /* Prevent text selection highlight on long press */
+    .no-select {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-950 font-sans antialiased flex flex-col items-center justify-start min-h-screen text-slate-100">
+
+  <!-- Desktop Outer Wrapper to retain mobile-first app structure -->
+  <div class="w-full max-w-[480px] h-screen sm:h-[92vh] sm:my-4 bg-slate-900 border-x border-slate-800/80 sm:rounded-[36px] shadow-2xl shadow-slate-950/80 overflow-hidden flex flex-col relative transition-all duration-300">
+
+    <!-- ================================================================= -->
+    <!-- VIEW 1: THREADS LIST VIEW (DEFAULT VIEW)                          -->
+    <!-- ================================================================= -->
+    <div id="threadsView" class="w-full h-full flex flex-col transition-all duration-300 ease-in-out relative overflow-hidden">
+      
+      <!-- Thread View Header (Permanently Anchored) -->
+      <header class="relative flex-shrink-0 z-30 bg-slate-900 px-4 h-16 flex items-center justify-between border-b border-slate-800 select-none shadow-md overflow-hidden">
+        
+        <!-- Default Header Content -->
+        <div id="threadDefaultHeader" class="absolute inset-x-0 px-4 h-full flex items-center justify-between transition-all duration-200 opacity-150 z-10">
+          
+          <!-- Left: Signature Penguin Logo Image + Title "Connect with friends" -->
+          <div class="flex items-center space-x-3">
+            <div class="relative group cursor-pointer" title="Logo">
+              <img 
+                src="logo.png" 
+                alt="Logo" 
+                class="w-10 h-10 object-cover rounded-full hover:scale-105 transition-transform duration-200" 
+                onerror="this.src='https://placehold.co/100/1e293b/ffffff?text=Logo'" 
+              />
+            </div>
+
+            <!-- Title Text -->
+            <h1 class="text-base font-bold text-slate-100 tracking-tight">Connect with friends</h1>
+          </div>
+
+          <!-- Right: Signature Search Icon Button -->
+          <button onclick="toggleThreadSearch(true)" aria-label="Search threads" class="w-10 h-10 rounded-full bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-95 focus:outline-none">
+            <i class="fa-solid fa-magnifying-glass text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Expanded Header Search Bar State (Strictly Within Header Height) -->
+        <div id="threadSearchHeader" class="absolute inset-x-0 px-4 h-full bg-slate-900 flex items-center justify-between transition-all duration-200 opacity-0 pointer-events-none z-20">
+          <div class="relative flex-1 flex items-center h-10">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-xs pointer-events-none z-10"></i>
+            <input 
+              type="text" 
+              id="threadSearchInput" 
+              placeholder="Search chats by name or LGA..." 
+              oninput="filterThreads(this.value)"
+              class="w-full bg-slate-950 text-slate-100 text-sm font-medium pl-10 pr-9 py-2 rounded-full border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500 shadow-inner"
+              autocomplete="off"
+            />
+            <button onclick="clearThreadSearch()" class="absolute right-3 text-slate-400 hover:text-slate-200 text-xs z-10">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+          </div>
+          <button onclick="toggleThreadSearch(false)" class="ml-3 text-xs font-semibold text-slate-400 hover:text-white px-2 py-1 shrink-0">
+            Cancel
+          </button>
+        </div>
+
+      </header>
+
+      <!-- Threads Scroll List -->
+      <main class="flex-1 overflow-y-auto hide-scrollbar px-3 py-2 space-y-1" id="threadsListContainer">
+        <!-- Rendered dynamically by JS -->
+      </main>
+
+      <!-- Bottom Navigation Bar (Permanently Anchored) -->
+      <footer class="flex-shrink-0 bg-slate-900 border-t border-slate-800 px-6 py-2.5 flex items-center justify-between select-none z-30 shadow-lg">
+        <a href="index.html" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+          <i class="fa-solid fa-compass text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Discover</span>
+        </a>
+        <a href="protectme.html" onclick="showToast('Protect Me shield active')" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+          <i class="fa-solid fa-shield-halved text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Protect Me</span>
+        </a>
+        <a href="#" class="flex flex-col items-center text-slate-100 transition-colors">
+          <i class="fa-solid fa-message text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Chats</span>
+        </a>
+        <a href="profiles.html" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+          <i class="fa-solid fa-user text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Profile</span>
+        </a>
+      </footer>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 2: FULL PAGE CHAT DETAIL VIEW                                -->
+    <!-- ================================================================= -->
+    <div id="chatDetailView" class="absolute inset-0 z-40 bg-slate-900 flex flex-col translate-x-full transition-transform duration-300 ease-out overflow-hidden">
+      
+      <!-- Chat Detail Header (Permanently Anchored) -->
+      <header class="flex-shrink-0 z-30 px-4 h-16 flex items-center justify-between bg-slate-900 border-b border-slate-800 select-none shadow-md">
+        
+        <!-- Left: Back Button & User Brief -->
+        <div class="flex items-center space-x-2">
+          <button onclick="closeChatDetail()" aria-label="Back to threads" class="w-9 h-9 rounded-full bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-arrow-left text-sm"></i>
+          </button>
+          
+          <!-- User Avatar & Status Info -->
+          <div class="flex items-center space-x-2.5 cursor-pointer" onclick="showToast('Viewing recipient profile')">
+            <div class="relative">
+              <img id="detailAvatar" src="" class="w-10 h-10 rounded-full object-cover border border-slate-700/80" alt="Chat Recipient" />
+              <span id="detailStatusDot" class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-slate-900 bg-emerald-500"></span>
+            </div>
+            <div>
+              <h2 id="detailName" class="text-sm font-bold text-slate-100 leading-tight truncate max-w-[140px]">User Name</h2>
+              <p id="detailStatusText" class="text-[11px] font-medium text-emerald-400 flex items-center">Currently Online</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Video Call, Voice Call & Three Dots Menu -->
+        <div class="flex items-center space-x-1">
+          <button onclick="triggerCall('video')" aria-label="Video Call" class="w-9 h-9 rounded-full hover:bg-slate-800/70 text-slate-300 hover:text-white flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-video text-sm"></i>
+          </button>
+          <button onclick="triggerCall('voice')" aria-label="Voice Call" class="w-9 h-9 rounded-full hover:bg-slate-800/70 text-slate-300 hover:text-white flex items-center justify-center transition-colors">
+            <i class="fa-solid fa-phone text-sm"></i>
+          </button>
+          
+          <div class="relative">
+            <button id="threeDotsBtn" onclick="toggleMenuModal(true)" aria-label="More options" class="w-9 h-9 rounded-full hover:bg-slate-800/70 text-slate-300 hover:text-white flex items-center justify-center transition-colors">
+              <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+      </header>
+
+      <!-- Scrollable Messages Area -->
+      <main id="messagesContainer" onscroll="handleMessagesScroll()" class="flex-1 overflow-y-auto px-4 pt-4 pb-3 space-y-3 relative">
+        <div class="space-y-1.5 mb-2 select-none">
+          <div class="px-2.5 py-1.5 bg-slate-950/40 border border-slate-800/40 rounded-lg text-[9px] leading-tight text-slate-400/80 text-center max-w-[94%] mx-auto backdrop-blur-xs">
+            <p>Chats are discreet. Keep inside platform for security against predatory/kito behavior. Verified members protected legally.</p>
+          </div>
+        </div>
+      </main>
+
+      <!-- 2-Message Limit Warning Banner -->
+      <div id="messageLimitBanner" class="hidden px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 text-amber-300 text-xs flex items-center justify-between">
+        <span id="limitBannerText">You have sent 2 messages. Waiting for a reply before continuing.</span>
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+
+      <!-- Bottom Media & Input Bar (Permanently Anchored) -->
+      <footer class="flex-shrink-0 p-3 bg-slate-900 border-t border-slate-800/90 relative z-30 shadow-lg">
+        
+        <!-- Reply Context Banner -->
+        <div id="replyBanner" class="hidden mb-2 px-3 py-2 bg-slate-800/90 rounded-2xl border border-slate-700/60 flex items-center justify-between text-xs transition-all">
+          <div class="border-l-2 border-indigo-500 pl-2.5 overflow-hidden">
+            <span id="replyAuthor" class="text-[10px] uppercase font-bold text-indigo-400 block">Replying to User</span>
+            <p id="replyPreviewText" class="text-slate-300 truncate text-[11px]">Message preview text...</p>
+          </div>
+          <button onclick="cancelReply()" class="text-slate-400 hover:text-white ml-2">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- WhatsApp-Style Staged Attachment Preview Box -->
+        <div id="attachmentPreviewBox" class="hidden mb-2 p-2 bg-slate-800/90 rounded-2xl border border-slate-700/70 flex items-center space-x-3 relative shadow-lg">
+          <div class="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-950 flex-shrink-0 border border-slate-700 cursor-pointer" onclick="openFullscreenMedia(stagedAttachment.mediaUrl || stagedAttachment.preview, stagedAttachment.type)">
+            <img id="attachmentImagePreview" src="" class="w-full h-full object-cover" alt="Attachment Preview" />
+            <div id="attachmentVideoIcon" class="hidden absolute inset-0 bg-slate-950/50 flex items-center justify-center text-white">
+              <i class="fa-solid fa-play text-xs"></i>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p id="attachmentTitle" class="text-xs font-semibold text-slate-200 truncate">attachment_file.mp4</p>
+            <p id="attachmentSub" class="text-[10px] text-slate-400">Ready to send with message</p>
+          </div>
+          <button onclick="removeAttachment()" class="w-7 h-7 rounded-full bg-slate-700/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-xs">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Voice Recording HUD Bar -->
+        <div id="voiceRecordingHUD" class="hidden mb-2 py-1.5 px-3 bg-slate-800/95 border border-slate-700/80 rounded-2xl flex items-center justify-between text-slate-200 text-xs shadow-xl relative max-w-[240px]">
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span id="recordingTimer" class="font-mono text-[11px] font-bold text-slate-100">0:00</span>
+          </div>
+          <div class="w-14 mx-1 flex items-center justify-center overflow-hidden">
+            <div class="w-8 h-1 bg-red-400/30 rounded-full animate-short-wave"></div>
+          </div>
+          <button onclick="cancelVoiceRecording()" title="Cancel and Delete Recording" class="w-6 h-6 rounded-full hover:bg-slate-700/80 text-slate-400 hover:text-rose-400 flex items-center justify-center text-xs transition-colors">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+
+        <!-- Input Bar Layout -->
+        <div class="flex items-end space-x-2 relative">
+          
+          <div class="relative flex items-center flex-shrink-0">
+            <button 
+              id="plusToggleBtn" 
+              onclick="togglePlusMenu()" 
+              aria-label="Toggle attachments menu"
+              class="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-transform duration-300 active:scale-95"
+            >
+              <i id="plusIcon" class="fa-solid fa-plus text-sm transition-transform duration-300"></i>
+            </button>
+
+            <div id="plusExpandedMenu" class="absolute left-12 bottom-0 flex items-center space-x-2 opacity-0 pointer-events-none translate-x-[-10px] transition-all duration-300 bg-slate-900/95 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-slate-800 shadow-xl z-30">
+              <button 
+                onclick="triggerNativePhotoApp(); togglePlusMenu();" 
+                title="Attach Media or File (Max 30MB for video)"
+                class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs transition-transform active:scale-90"
+              >
+                <i class="fa-solid fa-paperclip"></i>
+              </button>
+
+              <div class="relative flex flex-col items-center">
+                <div id="recordingLockIndicator" class="hidden absolute -top-12 left-1/2 -translate-x-1/2 flex flex-col items-center space-y-0.5 bg-slate-900/95 px-2.5 py-1 rounded-full border border-slate-700/80 shadow-xl text-[10px] text-amber-300 select-none pointer-events-none z-40">
+                  <i id="lockIconElement" class="fa-solid fa-lock-open text-xs"></i>
+                  <div class="flex flex-col items-center leading-none">
+                    <i class="fa-solid fa-angle-up text-[8px] animate-double-arrow"></i>
+                    <i class="fa-solid fa-angle-up text-[8px] animate-double-arrow" style="animation-delay: 0.2s;"></i>
+                  </div>
+                </div>
+
+                <button 
+                  id="voiceMicButton"
+                  onmousedown="startVoiceRecording();" 
+                  onmouseup="stopVoiceRecording();" 
+                  onmouseleave="cancelVoiceRecording();"
+                  ontouchstart="startVoiceRecording();" 
+                  ontouchend="stopVoiceRecording();" 
+                  ontouchmove="handleVoiceTouchMove(event);"
+                  title="Hold to Record Voice or Slide Up to Lock"
+                  class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs transition-transform active:scale-90"
+                >
+                  <i class="fa-solid fa-microphone"></i>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Auto-Expanding Textarea Input -->
+          <div class="flex-1 bg-slate-950/80 rounded-2xl px-3.5 py-2 border border-slate-800/80 shadow-inner flex items-center min-h-[40px]">
+            <textarea 
+              id="chatTextInput"
+              rows="1"
+              placeholder="Type a message..." 
+              oninput="autoResizeTextarea(this)"
+              onkeydown="handleTextareaKeyDown(event)"
+              class="w-full bg-transparent text-slate-100 text-sm focus:outline-none placeholder:text-slate-500 font-medium resize-none max-h-32 overflow-y-auto leading-relaxed"
+            ></textarea>
+          </div>
+
+          <button 
+            onclick="handleSendMessage()"
+            aria-label="Send message"
+            class="w-10 h-10 rounded-full bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center transition-transform active:scale-90 shadow-md flex-shrink-0"
+          >
+            <i class="fa-solid fa-arrow-up text-xs font-bold"></i>
+          </button>
+
+        </div>
+
+      </footer>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODALS & OVERLAYS                                                 -->
+    <!-- ================================================================= -->
+
+    <!-- FULLSCREEN MEDIA VIEWER OVERLAY -->
+    <div id="fullscreenMediaOverlay" class="hidden fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-0 m-0 border-0 transition-all duration-300">
+      <div class="absolute top-0 inset-x-0 h-16 px-4 flex items-center justify-between bg-gradient-to-b from-slate-950/90 to-transparent z-10 select-none">
+        <span id="fullscreenMediaTitle" class="text-xs font-semibold text-slate-300 truncate max-w-[280px]">Media View</span>
+        <button onclick="closeFullscreenMedia()" class="w-10 h-10 rounded-full bg-slate-800/80 hover:bg-slate-700 text-white flex items-center justify-center text-sm shadow-md">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="fullscreenMediaContent" class="w-full h-full flex items-center justify-center p-0 m-0 bg-black">
+      </div>
+    </div>
+
+    <!-- THREE DOTS POPUP MENU -->
+    <div id="threeDotsModal" onclick="handleModalBgClick(event, 'threeDotsModal')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-start justify-end p-4">
+      <div class="bg-slate-800/95 border border-slate-700/80 rounded-2xl w-48 shadow-2xl p-1.5 mt-14 mr-2 space-y-1 animate-in fade-in duration-200">
+        <button onclick="executeHeaderOption('Mute')" class="w-full text-left px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700/80 rounded-xl flex items-center space-x-2.5">
+          <i class="fa-solid fa-bell-slash text-slate-400 w-4"></i>
+          <span>Mute User</span>
+        </button>
+        <button onclick="executeHeaderOption('Clear Chat')" class="w-full text-left px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700/80 rounded-xl flex items-center space-x-2.5">
+          <i class="fa-solid fa-broom text-slate-400 w-4"></i>
+          <span>Clear Chat</span>
+        </button>
+        <div class="h-px bg-slate-700/60 my-1"></div>
+        <button onclick="executeHeaderOption('Block')" class="w-full text-left px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/20 rounded-xl flex items-center space-x-2.5">
+          <i class="fa-solid fa-ban text-rose-400 w-4"></i>
+          <span>Block User</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- HIDDEN REAL FILE INPUT FOR ATTACHMENTS -->
+    <input type="file" id="nativePhotoFileInput" accept="image/png,image/jpeg,image/jpg,image/webp,video/mp4,video/quicktime" class="hidden" onchange="handleNativeFileSelected(event)" />
+
+    <!-- CONTEXTUAL MESSAGE ACTIONS MENU WITH FLOATING EMOJI REACTION BAR -->
+    <div id="messageActionsModal" onclick="handleModalBgClick(event, 'messageActionsModal')" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-4">
+      
+      <div class="w-full max-w-xs flex flex-col items-center space-y-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        
+        <!-- Floating 6 Reaction Emoji Pill Bar -->
+        <div class="bg-slate-800/95 border border-slate-700/90 rounded-full px-3 py-2 shadow-2xl flex items-center justify-between w-full">
+          <button onclick="applyReaction('👍')" class="text-lg hover:scale-125 transition-transform">👍</button>
+          <button onclick="applyReaction('❤️')" class="text-lg hover:scale-125 transition-transform">❤️</button>
+          <button onclick="applyReaction('😂')" class="text-lg hover:scale-125 transition-transform">😂</button>
+          <button onclick="applyReaction('😮')" class="text-lg hover:scale-125 transition-transform">😮</button>
+          <button onclick="applyReaction('😢')" class="text-lg hover:scale-125 transition-transform">😢</button>
+          <button onclick="applyReaction('🙏')" class="text-lg hover:scale-125 transition-transform">🙏</button>
+          <div class="w-px h-4 bg-slate-700 mx-1"></div>
+          <button onclick="openCustomEmojiPicker()" title="More Reactions" class="w-7 h-7 rounded-full bg-slate-700/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-xs transition-transform active:scale-90">
+            <i class="fa-solid fa-plus text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Main Context Menu Modal Box -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full overflow-hidden shadow-2xl p-3 space-y-1">
+          <div id="messageActionOwnerBadge" class="text-[10px] uppercase tracking-wider font-bold text-slate-500 px-3 py-1">Message Options</div>
+          
+          <button onclick="actionReplyMessage()" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 rounded-xl flex items-center space-x-3">
+            <i class="fa-solid fa-reply text-indigo-400 w-4"></i>
+            <span>Reply Message</span>
+          </button>
+          
+          <button id="actionEditBtn" onclick="actionEditMessage()" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 rounded-xl flex items-center space-x-3">
+            <i class="fa-solid fa-pen-to-square text-emerald-400 w-4"></i>
+            <span>Edit Message</span>
+          </button>
+
+          <button onclick="actionDeleteForMe()" class="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-200 hover:bg-slate-800 rounded-xl flex items-center space-x-3">
+            <i class="fa-solid fa-trash text-amber-400 w-4"></i>
+            <span>Delete for me</span>
+          </button>
+
+          <button id="actionDeleteEveryoneBtn" onclick="actionDeleteForEveryone()" class="w-full text-left px-3 py-2.5 text-xs font-medium text-rose-400 hover:bg-rose-500/20 rounded-xl flex items-center space-x-3">
+            <i class="fa-solid fa-trash-can text-rose-400 w-4"></i>
+            <span>Delete for everyone</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastNotification" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-slate-100 text-xs px-4 py-2 rounded-full border border-slate-700 shadow-xl opacity-0 pointer-events-none transition-all duration-300">
+      Notification text
+    </div>
+
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    const SUPABASE_URL = 'https://djryydilgqntazeibxch.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_Gu2BJqoYClKbb9xgqJuHuw_MtPk2d5I';
+
+    let supabaseClient = null;
+    let currentUser = null;
+    let activeThread = null;
+    let chatChannel = null;
+
+    let sessionTextCount = 0;
+    let sessionPhotoCount = 0;
+
+    let pressHoldTimer = null;
+    let voiceRecordTimer = null;
+    let voiceSeconds = 0;
+    let isUserScrolling = false;
+    let scrollTimeout = null;
+    let stagedAttachment = null;
+    let selectedMessageForAction = null;
+    let replyContext = null;
+    let isEditingMode = false;
+    let isPlusMenuExpanded = false;
+    let isVoiceLocked = false;
+
+    let CHAT_THREADS = JSON.parse(localStorage.getItem('discovery_chat_threads')) || [
+      {
+        id: "tunde_art",
+        name: "Tunde Bakare",
+        lga: "Ikeja, Lagos",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+        online: true,
+        lastMsg: "Let's review the new design concept tomorrow morning.",
+        time: "10:42 AM",
+        consecutiveMessagesSentWithoutReply: 0,
+        messages: [
+          { id: 101, sender: "them", text: "Hey! Did you check out the new discovery features?", time: "10:38 AM", type: "text" },
+          { id: 102, sender: "me", text: "Yes, I saw it! The mobile transitions are super crisp.", time: "10:40 AM", type: "text" },
+          { id: 103, sender: "them", text: "Let's review the new design concept tomorrow morning.", time: "10:42 AM", type: "text" }
+        ]
+      }
+    ];
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+      } catch (e) { console.warn(e); }
+
+      await checkAuthAndRoute();
+      await loadThreadsStateFromSupabase();
+      renderThreads(CHAT_THREADS);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetUserId = urlParams.get('user');
+      if (targetUserId) {
+        openChatDetail(targetUserId);
+      }
+    });
+
+    async function checkAuthAndRoute() {
+      currentUser = { id: "test_user_123456", email: "tester@connectwithfriends.test" };
+      return;
+    }
+
+    async function loadThreadsStateFromSupabase() {
+      if (!supabaseClient || !currentUser) return;
+
+      const { data: blockedList } = await supabaseClient
+        .from('blocked_users')
+        .select('blocked_user_id')
+        .eq('user_id', currentUser.id);
+
+      const blockedIds = new Set((blockedList || []).map(b => b.blocked_user_id));
+      CHAT_THREADS = CHAT_THREADS.filter(t => !blockedIds.has(t.id));
+
+      const { data: remoteThreads } = await supabaseClient
+        .from('chat_threads')
+        .select('*')
+        .eq('user_id', currentUser.id);
+
+      if (remoteThreads && remoteThreads.length > 0) {
+        remoteThreads.forEach(rt => {
+          let local = CHAT_THREADS.find(t => t.id === rt.peer_id);
+          if (local) {
+            local.lastMsg = rt.last_msg;
+            local.time = rt.last_time;
+          } else {
+            CHAT_THREADS.push({
+              id: rt.peer_id,
+              name: "Member",
+              lga: "Nigeria",
+              avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+              online: true,
+              lastMsg: rt.last_msg,
+              time: rt.last_time,
+              consecutiveMessagesSentWithoutReply: 0,
+              messages: []
+            });
+          }
+        });
+      }
+
+      const hasRealUsers = CHAT_THREADS.some(t => t.id !== "maro_erubasa_welcome");
+      
+      if (hasRealUsers) {
+        CHAT_THREADS = CHAT_THREADS.filter(t => t.id !== "maro_erubasa_welcome");
+      } else {
+        const maroExists = CHAT_THREADS.some(t => t.id === "maro_erubasa_welcome");
+        if (!maroExists) {
+          CHAT_THREADS.unshift({
+            id: "maro_erubasa_welcome",
+            name: "Maro Erubasa",
+            lga: "Lagos, Nigeria",
+            avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=600&q=80",
+            online: true,
+            lastMsg: "Hey my name is maro, welcome to the platform!",
+            time: "Just now",
+            consecutiveMessagesSentWithoutReply: 0,
+            messages: [
+              { id: 999, sender: "them", text: "Hey my name is maro, it's just me welcoming them to the platform and all the benefits that comes with it 🎉", time: "Just now", type: "text" }
+            ]
+          });
+        }
+      }
+    }
+
+    function renderThreads(threads) {
+      const container = document.getElementById('threadsListContainer');
+      
+      if (threads.length === 0) {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-16 text-center text-slate-500">
+            <i class="fa-solid fa-comments text-3xl mb-2"></i>
+            <p class="text-xs font-medium">No chat threads found</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = threads.map(thread => `
+        <div 
+          onclick="openChatDetail('${thread.id}')"
+          class="flex items-center space-x-3 p-3 rounded-2xl hover:bg-slate-800/50 cursor-pointer transition-colors active:bg-slate-800/80"
+        >
+          <div class="relative flex-shrink-0">
+            <img 
+              src="${thread.avatar}" 
+              alt="${thread.name}" 
+              class="w-12 h-12 rounded-full object-cover border-2 ${thread.online ? 'border-emerald-500' : 'border-slate-700'}"
+            />
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-0.5">
+              <h3 class="text-sm font-bold text-slate-100 truncate">${thread.name}</h3>
+              <span class="text-[10px] text-slate-400 font-medium">${thread.time}</span>
+            </div>
+            
+            <p class="text-xs text-slate-400 truncate flex items-center space-x-1">
+              <i class="fa-solid fa-location-dot text-[10px] text-slate-500 mr-1"></i>
+              <span class="text-slate-400 font-medium mr-2">${thread.lga}</span>
+              <span class="text-slate-500">•</span>
+              <span class="text-slate-300 truncate ml-1">${thread.lastMsg || 'No messages yet'}</span>
+            </p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleThreadSearch(expand) {
+      const defaultHeader = document.getElementById('threadDefaultHeader');
+      const searchHeader = document.getElementById('threadSearchHeader');
+      const input = document.getElementById('threadSearchInput');
+
+      if (expand) {
+        defaultHeader.classList.remove('opacity-150');
+        defaultHeader.classList.add('opacity-0', 'pointer-events-none');
+        searchHeader.classList.remove('opacity-0', 'pointer-events-none');
+        searchHeader.classList.add('opacity-150');
+        setTimeout(() => input.focus(), 150);
+      } else {
+        searchHeader.classList.remove('opacity-150');
+        searchHeader.classList.add('opacity-0', 'pointer-events-none');
+        defaultHeader.classList.remove('opacity-0', 'pointer-events-none');
+        defaultHeader.classList.add('opacity-150');
+        clearThreadSearch();
+      }
+    }
+
+    function clearThreadSearch() {
+      const input = document.getElementById('threadSearchInput');
+      input.value = '';
+      filterThreads('');
+    }
+
+    function filterThreads(query) {
+      const q = query.toLowerCase().trim();
+      const filtered = CHAT_THREADS.filter(t => 
+        t.name.toLowerCase().includes(q) || t.lga.toLowerCase().includes(q)
+      );
+      renderThreads(filtered);
+    }
+
+    async function openChatDetail(threadId) {
+      if (!currentUser) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      activeThread = CHAT_THREADS.find(t => t.id === threadId);
+      if (!activeThread) {
+        activeThread = {
+          id: threadId,
+          name: "Connected Member",
+          lga: "Nigeria",
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+          online: true,
+          lastMsg: "Connected via Discovery",
+          time: "Just now",
+          consecutiveMessagesSentWithoutReply: 0,
+          messages: []
+        };
+        CHAT_THREADS.push(activeThread);
+      }
+
+      document.getElementById('detailAvatar').src = activeThread.avatar;
+      document.getElementById('detailName').innerText = activeThread.name;
+      
+      renderMessages();
+      checkMessageLimitState();
+      setupSupabaseRealtime(threadId);
+
+      const detailView = document.getElementById('chatDetailView');
+      detailView.classList.remove('translate-x-full');
+      detailView.classList.add('translate-x-0');
+    }
+
+    function closeChatDetail() {
+      const detailView = document.getElementById('chatDetailView');
+      detailView.classList.remove('translate-x-0');
+      detailView.classList.add('translate-x-full');
+      if (chatChannel && supabaseClient) {
+        supabaseClient.removeChannel(chatChannel);
+      }
+      activeThread = null;
+      cancelReply();
+      removeAttachment();
+      collapsePlusMenu();
+      saveLocalThreads();
+      renderThreads(CHAT_THREADS);
+    }
+
+    function setupSupabaseRealtime(threadId) {
+      if (!supabaseClient) return;
+
+      chatChannel = supabaseClient.channel(`chat_${threadId}`, {
+        config: { broadcast: { self: false } }
+      });
+
+      chatChannel
+        .on('broadcast', { event: 'new_message' }, async payload => {
+          const { data: mutedRecord } = await supabaseClient
+            .from('muted_users')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('muted_user_id', threadId)
+            .single();
+
+          receiveRealtimeMessage(payload.payload, !!mutedRecord);
+        })
+        .subscribe();
+    }
+
+    async function receiveRealtimeMessage(msg, isMuted) {
+      if (!activeThread) return;
+
+      activeThread.consecutiveMessagesSentWithoutReply = 0;
+      activeThread.messages.push(msg);
+      activeThread.lastMsg = msg.text || `[${msg.type}]`;
+      
+      checkMessageLimitState();
+      renderMessages();
+      saveLocalThreads();
+      upsertThreadStateInSupabase(activeThread.id, activeThread.lastMsg);
+
+      if (!isMuted) {
+        showToast(`New message from ${activeThread.name}`);
+      }
+    }
+
+    function handleMessagesScroll() {
+      isUserScrolling = true;
+      cancelMessageHold();
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        isUserScrolling = false;
+      }, 150);
+    }
+
+    function renderMessages() {
+      if (!activeThread) return;
+      const container = document.getElementById('messagesContainer');
+      
+      const safetyBannersHTML = `
+        <div class="space-y-1.5 mb-2 select-none">
+          <div class="px-2.5 py-1.5 bg-slate-950/40 border border-slate-800/40 rounded-lg text-[9px] leading-tight text-slate-400/80 text-center max-w-[94%] mx-auto backdrop-blur-xs">
+            <p>Chats are discreet. Keep inside platform for security against predatory/kito behavior. Verified members protected legally.</p>
+          </div>
+        </div>
+      `;
+
+      const messagesHTML = activeThread.messages.map(msg => {
+        const isMe = msg.sender === 'me';
+        
+        return `
+          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} group">
+            <div 
+              onmousedown="startMessageHold(event, ${msg.id})"
+              onmouseup="cancelMessageHold()"
+              onmouseleave="cancelMessageHold()"
+              ontouchstart="startMessageHold(event, ${msg.id})"
+              ontouchend="cancelMessageHold()"
+              oncontextmenu="event.preventDefault(); openMessageActions(${msg.id});"
+              class="max-w-[80%] rounded-2xl px-3.5 py-2.5 shadow-md relative no-select ${
+                isMe 
+                  ? 'bg-brand-600 text-white rounded-br-none' 
+                  : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/60'
+              }"
+            >
+              ${msg.replyContext ? `
+                <div class="mb-1.5 p-1.5 rounded-lg bg-black/20 border-l-2 border-amber-300 text-[10px]">
+                  <p class="font-bold opacity-80">${msg.replyContext.author}</p>
+                  <p class="truncate opacity-70">${msg.replyContext.text}</p>
+                </div>
+              ` : ''}
+
+              ${msg.type === 'image' ? `
+                <div class="rounded-xl overflow-hidden mb-1.5 border border-white/10 cursor-pointer" onclick="openFullscreenMedia('${msg.image || msg.preview}', 'image')">
+                  <img src="${msg.image || msg.preview}" class="w-full max-h-48 object-cover" />
+                </div>
+              ` : ''}
+
+              ${msg.type === 'video' ? `
+                <div 
+                  class="relative rounded-xl overflow-hidden mb-1.5 border border-white/10 bg-slate-950 cursor-pointer group/vid" 
+                  onclick="openFullscreenMedia('${msg.video || msg.mediaUrl || msg.preview}', 'video')"
+                >
+                  <img 
+                    src="${msg.thumbnail || msg.preview || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80'}" 
+                    class="w-full max-h-48 object-cover brightness-90 group-hover/vid:brightness-100 transition-all" 
+                    alt="Video Thumbnail"
+                  />
+                  <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div class="w-10 h-10 rounded-full bg-slate-900/80 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white shadow-lg">
+                      <i class="fa-solid fa-play text-xs ml-0.5"></i>
+                    </div>
+                  </div>
+                  <span class="absolute bottom-1.5 right-1.5 text-[9px] bg-slate-950/80 px-1.5 py-0.5 rounded-md text-slate-200 font-mono">VIDEO</span>
+                </div>
+              ` : ''}
+
+              ${msg.type === 'voice' ? `
+                <div class="flex items-center space-x-3 py-1 px-1">
+                  <button class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white"><i class="fa-solid fa-play text-xs"></i></button>
+                  <div class="flex-1"><div class="h-1.5 w-24 bg-white/30 rounded-full overflow-hidden"><div class="h-full w-1/3 bg-white"></div></div></div>
+                  <span class="text-[10px] font-mono opacity-80">${msg.duration}</span>
+                </div>
+              ` : ''}
+
+              ${msg.text ? `<p class="text-xs leading-relaxed font-normal">${msg.text}</p>` : ''}
+
+              <div class="flex items-center justify-end space-x-1 mt-1 text-[9px] opacity-70">
+                <span>${msg.time}</span>
+                ${isMe ? `<i class="fa-solid fa-check-double text-[9px]"></i>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = safetyBannersHTML + messagesHTML;
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function startMessageHold(event, msgId) {
+      if (isUserScrolling) return;
+      cancelMessageHold();
+      pressHoldTimer = setTimeout(() => {
+        if (!isUserScrolling) openMessageActions(msgId);
+      }, 500);
+    }
+
+    function cancelMessageHold() {
+      if (pressHoldTimer) { clearTimeout(pressHoldTimer); pressHoldTimer = null; }
+    }
+
+    function openFullscreenMedia(url, type) {
+      const overlay = document.getElementById('fullscreenMediaOverlay');
+      const content = document.getElementById('fullscreenMediaContent');
+      document.getElementById('fullscreenMediaTitle').innerText = type === 'video' ? 'Video Player' : 'Image Viewer';
+      content.innerHTML = type === 'video' ? `<video src="${url}" autoplay controls playsinline class="w-full h-full object-contain"></video>` : `<img src="${url}" class="w-full h-full object-contain" />`;
+      overlay.classList.remove('hidden');
+    }
+
+    function closeFullscreenMedia() {
+      document.getElementById('fullscreenMediaOverlay').classList.add('hidden');
+      document.getElementById('fullscreenMediaContent').innerHTML = '';
+    }
+
+    function togglePlusMenu() {
+      isPlusMenuExpanded = !isPlusMenuExpanded;
+      const menu = document.getElementById('plusExpandedMenu');
+      const plusIcon = document.getElementById('plusIcon');
+
+      if (isPlusMenuExpanded) {
+        plusIcon.style.transform = 'rotate(45deg)';
+        menu.classList.remove('opacity-0', 'pointer-events-none', 'translate-x-[-10px]');
+        menu.classList.add('opacity-150', 'translate-x-0');
+      } else {
+        collapsePlusMenu();
+      }
+    }
+
+    function collapsePlusMenu() {
+      isPlusMenuExpanded = false;
+      const menu = document.getElementById('plusExpandedMenu');
+      const plusIcon = document.getElementById('plusIcon');
+      if (plusIcon && menu) {
+        plusIcon.style.transform = 'rotate(0deg)';
+        menu.classList.remove('opacity-150', 'translate-x-0');
+        menu.classList.add('opacity-0', 'pointer-events-none', 'translate-x-[-10px]');
+      }
+    }
+
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+
+    function handleTextareaKeyDown(event) {}
+
+    function triggerNativePhotoApp() {
+      document.getElementById('nativePhotoFileInput').click();
+    }
+
+    function handleNativeFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const isVideo = file.type.startsWith('video/');
+      if (isVideo && file.size > 30 * 1024 * 1024) {
+        alert('Video file exceeds the 30MB limit.');
+        return;
+      }
+
+      const fileUrl = URL.createObjectURL(file);
+      if (isVideo) {
+        stagedAttachment = { type: 'video', title: file.name, preview: fileUrl, mediaUrl: fileUrl };
+        showAttachmentPreview();
+      } else {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          stagedAttachment = { type: 'image', title: file.name, preview: evt.target.result };
+          showAttachmentPreview();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function startVoiceRecording() {
+      if (isVoiceLocked) return;
+      document.getElementById('voiceRecordingHUD').classList.remove('hidden');
+      document.getElementById('recordingLockIndicator').classList.remove('hidden');
+      voiceSeconds = 0;
+      document.getElementById('recordingTimer').innerText = '0:00';
+      voiceRecordTimer = setInterval(() => {
+        voiceSeconds++;
+        const mins = Math.floor(voiceSeconds / 60);
+        const secs = voiceSeconds % 60;
+        document.getElementById('recordingTimer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+      }, 1000);
+    }
+
+    function handleVoiceTouchMove(event) {
+      if (!voiceRecordTimer || isVoiceLocked) return;
+      const touch = event.touches[0];
+      const micBtn = document.getElementById('voiceMicButton');
+      const rect = micBtn.getBoundingClientRect();
+      if (touch.clientY < rect.top - 35) {
+        isVoiceLocked = true;
+        document.getElementById('lockIconElement').className = 'fa-solid fa-lock text-xs text-amber-400';
+        showToast('Voice recording locked.');
+      }
+    }
+
+    function stopVoiceRecording() {
+      document.getElementById('recordingLockIndicator').classList.add('hidden');
+      if (isVoiceLocked) return;
+      if (!voiceRecordTimer) return;
+      clearInterval(voiceRecordTimer);
+      voiceRecordTimer = null;
+      document.getElementById('voiceRecordingHUD').classList.add('hidden');
+
+      if (voiceSeconds >= 1) {
+        const mins = Math.floor(voiceSeconds / 60);
+        const secs = voiceSeconds % 60;
+        stagedAttachment = { type: 'voice', title: `Voice Note (${mins}:${secs < 10 ? '0' + secs : secs})`, preview: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=300&q=80', duration: `${mins}:${secs < 10 ? '0' + secs : secs}` };
+        showAttachmentPreview();
+      }
+    }
+
+    function cancelVoiceRecording() {
+      if (voiceRecordTimer) { clearInterval(voiceRecordTimer); voiceRecordTimer = null; }
+      isVoiceLocked = false;
+      document.getElementById('voiceRecordingHUD').classList.add('hidden');
+      document.getElementById('recordingLockIndicator').classList.add('hidden');
+    }
+
+    function showAttachmentPreview() {
+      if (!stagedAttachment) return;
+      document.getElementById('attachmentImagePreview').src = stagedAttachment.preview;
+      document.getElementById('attachmentTitle').innerText = stagedAttachment.title;
+      document.getElementById('attachmentPreviewBox').classList.remove('hidden');
+    }
+
+    function removeAttachment() {
+      stagedAttachment = null;
+      isVoiceLocked = false;
+      document.getElementById('attachmentPreviewBox').classList.add('hidden');
+      document.getElementById('voiceRecordingHUD').classList.add('hidden');
+      document.getElementById('recordingLockIndicator').classList.add('hidden');
+    }
+
+    async function handleSendMessage() {
+      const input = document.getElementById('chatTextInput');
+      const text = input.value.trim();
+
+      if (!text && !stagedAttachment) return;
+
+      if (activeThread.consecutiveMessagesSentWithoutReply >= 2) {
+        showToast('You must wait for a reply before sending more messages.');
+        return;
+      }
+
+      if (!activeThread.online) {
+        showToast('User is offline. Try again when they are online.');
+        return;
+      }
+
+      const newMsg = {
+        id: Date.now(),
+        sender: "me",
+        text: text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: stagedAttachment ? stagedAttachment.type : "text"
+      };
+
+      if (stagedAttachment) {
+        newMsg.preview = stagedAttachment.preview;
+        newMsg.type = stagedAttachment.type;
+        if (stagedAttachment.duration) newMsg.duration = stagedAttachment.duration;
+      }
+
+      activeThread.consecutiveMessagesSentWithoutReply++;
+      activeThread.messages.push(newMsg);
+      activeThread.lastMsg = text || `[${stagedAttachment?.type}]`;
+
+      if (chatChannel) {
+        chatChannel.send({ type: 'broadcast', event: 'new_message', payload: newMsg });
+      }
+
+      await logUsageToSupabase(newMsg.type);
+
+      input.value = '';
+      input.style.height = 'auto';
+      removeAttachment();
+      checkMessageLimitState();
+      renderMessages();
+      saveLocalThreads();
+      upsertThreadStateInSupabase(activeThread.id, activeThread.lastMsg);
+    }
+
+    async function logUsageToSupabase(type) {
+      if (!supabaseClient || !currentUser) return;
+      let cost = 0, metric = 'text';
+
+      if (type === 'text') {
+        sessionTextCount++;
+        if (sessionTextCount >= 100) { cost = 5; sessionTextCount = 0; }
+      } else if (type === 'image') {
+        sessionPhotoCount++;
+        if (sessionPhotoCount >= 5) { cost = 5; sessionPhotoCount = 0; metric = 'photo'; }
+      } else if (type === 'video') {
+        cost = 10; metric = 'video';
+      }
+
+      if (cost > 0) {
+        await supabaseClient.from('usage').insert({ user_id: currentUser.id, metric_type: metric, cost_naira: cost });
+      }
+    }
+
+    async function upsertThreadStateInSupabase(peerId, lastMsg) {
+      if (!supabaseClient || !currentUser) return;
+      await supabaseClient.from('chat_threads').upsert({
+        user_id: currentUser.id,
+        peer_id: peerId,
+        last_msg: lastMsg,
+        last_time: 'Just now',
+        updated_at: new Date()
+      }, { onConflict: 'user_id,peer_id' });
+    }
+
+    function checkMessageLimitState() {
+      const banner = document.getElementById('messageLimitBanner');
+      if (activeThread && activeThread.consecutiveMessagesSentWithoutReply >= 2) {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function applyReaction(emoji) {
+      if (activeThread && selectedMessageForAction) {
+        const msg = activeThread.messages.find(m => m.id === selectedMessageForAction);
+        if (msg) {
+          msg.reaction = msg.reaction === emoji ? null : emoji;
+          renderMessages();
+        }
+      }
+      closeModal('messageActionsModal');
+    }
+
+    function openCustomEmojiPicker() { closeModal('messageActionsModal'); showToast('Opening emoji panel...'); }
+    function openMessageActions(msgId) { selectedMessageForAction = msgId; openModal('messageActionsModal'); }
+    function actionReplyMessage() { closeModal('messageActionsModal'); }
+    function actionEditMessage() { closeModal('messageActionsModal'); }
+    function actionDeleteForMe() {
+      if (activeThread) {
+        activeThread.messages = activeThread.messages.filter(m => m.id !== selectedMessageForAction);
+        renderMessages();
+      }
+      closeModal('messageActionsModal');
+    }
+    function actionDeleteForEveryone() { actionDeleteForMe(); }
+
+    async function triggerCall(type) {
+      showToast(`Initiating ${type} call...`);
+      if (supabaseClient && currentUser) {
+        await supabaseClient.from('usage').insert({
+          user_id: currentUser.id,
+          metric_type: 'call',
+          cost_naira: 5,
+          details: { type, duration_mins: 1 }
+        });
+      }
+    }
+
+    function toggleMenuModal(show) {
+      if (show) openModal('threeDotsModal'); else closeModal('threeDotsModal');
+    }
+
+    async function executeHeaderOption(option) {
+      closeModal('threeDotsModal');
+      if (!activeThread || !supabaseClient || !currentUser) return;
+
+      if (option === 'Mute') {
+        await supabaseClient.from('muted_users').upsert({ user_id: currentUser.id, muted_user_id: activeThread.id });
+        showToast('User muted. Notifications disabled.');
+      } else if (option === 'Block') {
+        await supabaseClient.from('blocked_users').upsert({ user_id: currentUser.id, blocked_user_id: activeThread.id });
+        CHAT_THREADS = CHAT_THREADS.filter(t => t.id !== activeThread.id);
+        closeChatDetail();
+        renderThreads(CHAT_THREADS);
+        showToast('User blocked and hidden from threads.');
+      } else if (option === 'Clear Chat') {
+        activeThread.messages = [];
+        activeThread.lastMsg = 'Chat cleared';
+        renderMessages();
+        saveLocalThreads();
+        await upsertThreadStateInSupabase(activeThread.id, 'Chat cleared');
+        showToast('Chat history cleared. Thread retained in Supabase.');
+      }
+    }
+
+    function saveLocalThreads() { localStorage.setItem('discovery_chat_threads', JSON.stringify(CHAT_THREADS)); }
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function handleModalBgClick(event, id) { if (event.target.id === id) closeModal(id); }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      toast.innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-150');
+      setTimeout(() => {
+        toast.classList.remove('opacity-150');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2000);
+    }
+    
+    function changeTheme(themeName) {
+      document.documentElement.setAttribute('data-theme', themeName);
+      localStorage.setItem('user-app-theme', themeName);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('user-app-theme') || 'twilight';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      const selector = document.getElementById('themeSelector');
+      if (selector) selector.value = savedTheme;
+    });
+  </script>
+</body>
+</html>
