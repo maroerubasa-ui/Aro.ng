@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Connect with Friends - Profile</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css" />
+
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Flutterwave Inline JS SDK -->
+  <script src="https://checkout.flutterwave.com/v3.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              500: '#6366f1',
+              600: '#4f46e5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 10px;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-950 font-sans antialiased flex flex-col items-center justify-start min-h-screen text-slate-100">
+
+  <!-- Desktop Outer Wrapper -->
+<div class="w-full max-w-[480px] h-screen sm:h-[92vh] sm:my-4 bg-slate-900 sm:rounded-[36px] shadow-2xl shadow-slate-950/80 overflow-hidden flex flex-col relative transition-all duration-300">
+
+
+    <!-- ================================================================= -->
+    <!-- PROFILE VIEW                                                      -->
+    <!-- ================================================================= -->
+    <div id="profileView" class="w-full h-full flex flex-col relative overflow-hidden bg-slate-900">
+      
+      <!-- Fixed Header -->
+      <header class="flex-shrink-0 z-30 bg-slate-900 border-b border-slate-800 px-4 h-16 flex items-center justify-between select-none shadow-md">
+        <div class="flex items-center space-x-2">
+          <h1 class="text-base font-bold text-slate-100 leading-tight">My Profile</h1>
+          <span id="guestBadge" class="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold px-2 py-0.5 rounded-full">Guest Mode</span>
+        </div>
+        <div id="authHeaderActions">
+          <button onclick="window.location.href='auth.html'" class="text-[10px] bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-1 rounded-full shadow">
+            Log In
+          </button>
+        </div>
+      </header>
+
+      <!-- Scrollable Main Content -->
+      <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4 hide-scrollbar">
+
+        <!-- 1. USER PROFILE HEADER CARD -->
+        <div class="bg-slate-950/60 border border-slate-800 rounded-3xl p-4 shadow-lg space-y-3">
+          <div class="flex items-center space-x-3.5">
+            <!-- Small Round Profile Image -->
+            <div class="relative flex-shrink-0">
+              <img 
+                id="userAvatar" 
+                src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='%2364748b' viewBox='0 0 24 24'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" 
+                alt="Profile Picture" 
+                class="w-14 h-14 rounded-full object-cover border-2 border-indigo-500 shadow-md bg-slate-800"
+              />
+              <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="uploadAvatar(event)" />
+              <button onclick="triggerAvatarUpload()" title="Change photo" class="absolute bottom-0 right-0 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[9px] shadow">
+                <i class="fa-solid fa-camera"></i>
+              </button>
+            </div>
+
+            <!-- User Info & Editing Controls -->
+            <div class="flex-1 min-w-0 space-y-1">
+              <div class="flex items-center space-x-1.5">
+                <h2 id="userHandle" class="text-sm font-bold text-slate-100 truncate">@guest_user</h2>
+                <!-- Verified Check Badge -->
+                <i id="verifiedBadge" title="Verified Government ID" class="fa-solid fa-circle-check text-sky-400 text-xs flex-shrink-0 hidden"></i>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <p id="userName" class="text-xs text-slate-400 font-medium truncate">Guest Visitor</p>
+                  <p id="userLocation" class="text-[10px] text-slate-500 font-medium truncate">Visitor Account</p>
+                </div>
+                
+                <!-- Action Icons -->
+                <div class="flex items-center space-x-2 text-slate-400">
+                  <button onclick="openEditProfileModal()" title="Edit Profile" class="hover:text-indigo-400 transition-colors text-xs p-1">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button onclick="promptResetProfile()" title="Reset Info" class="hover:text-rose-400 transition-colors text-xs p-1">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. SAFETY & IDENTITY HEALTH STATUS -->
+        <div id="verificationStatusCard" class="bg-slate-950/80 border border-amber-500/30 rounded-3xl p-3.5 flex items-center justify-between text-xs shadow-md">
+          <div class="flex items-center space-x-3">
+            <div id="verifyIconContainer" class="w-8 h-8 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-sm">
+              <i id="verifyIcon" class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+              <p id="verifyTitle" class="font-bold text-slate-200">Identity Verification Required</p>
+              <p id="verifySubtext" class="text-[10px] text-amber-400 font-medium">Verify your account to start meeting people</p>
+            </div>
+          </div>
+          <button id="verifyBtn" onclick="openVerificationModal()" class="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-3 py-1 rounded-full border border-amber-500/30 hover:bg-amber-500/30 transition-all">
+            Verify
+          </button>
+        </div>
+
+        <!-- 3. PROFILE POINTS / ACCOUNT BALANCE CARD -->
+        <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/40 border border-indigo-500/30 rounded-3xl p-4 shadow-xl flex items-center justify-between">
+          <div class="space-y-1">
+            <span class="text-[10px] text-indigo-300 font-bold uppercase tracking-wider block">Profile Points Balance</span>
+            <div class="flex items-baseline space-x-1.5">
+              <span id="pointBalance" class="text-2xl font-black font-mono text-slate-100">0</span>
+              <span class="text-xs text-indigo-400 font-bold">PTS</span>
+            </div>
+          </div>
+
+          <button 
+            onclick="openAddBalanceModal()" 
+            class="px-3.5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs rounded-2xl shadow-lg active:scale-95 transition-all flex items-center space-x-1.5"
+          >
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Top Up</span>
+          </button>
+        </div>
+
+        <!-- 4. TRANSACTION & CHECK-IN HISTORY CONTAINER -->
+        <div class="bg-slate-950/60 border border-slate-800 rounded-3xl p-4 space-y-3 shadow-md">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-2">
+              <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i>
+              <span>Transaction & Usage History</span>
+            </h3>
+            <span class="text-[10px] text-slate-500 font-medium">Recent Activity</span>
+          </div>
+
+          <!-- History Items List -->
+          <div id="usageHistoryList" class="space-y-2 text-xs max-h-48 overflow-y-auto pr-1">
+            <div class="text-center py-3 space-y-1">
+              <p class="text-slate-400 text-xs font-medium">Viewing in Guest Preview Mode</p>
+              <button onclick="window.location.href='auth.html'" class="text-[10px] text-indigo-400 underline font-bold hover:text-indigo-300">
+                Log in to view live balance & transactions
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. SECURITY, MODERATION & POLICIES MENU LIST -->
+        <div class="bg-slate-950/80 border border-slate-800 rounded-3xl overflow-hidden shadow-md divide-y divide-slate-800/80 text-xs">
+          
+          <!-- Casual One-Tap Theme Cycle Button -->
+          <div class="p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 w-4 text-center"></i>
+              <div>
+                <span class="font-medium text-slate-200 block">App Atmosphere</span>
+                <span id="currentThemeLabel" class="text-[10px] text-indigo-400 font-semibold">Twilight Aurora</span>
+              </div>
+            </div>
+            
+            <button 
+              onclick="cycleTheme()" 
+              class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-all flex items-center space-x-1.5"
+            >
+              <i class="fa-solid fa-rotate text-[10px]"></i>
+              <span>Change Theme</span>
+            </button>
+          </div>
+
+          <!-- Duress / Silent Cancel PIN -->
+          <button onclick="openDuressPinModal()" class="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-user-shield text-rose-400 w-4 text-center"></i>
+              <div>
+                <span class="font-medium text-slate-200 block">Duress Safety PIN</span>
+                <span class="text-[10px] text-slate-500">Fake deactivation code under threat</span>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+          </button>
+
+          <!-- Blocked Handles -->
+          <button onclick="openBlockedModal()" class="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-user-slash text-amber-400 w-4 text-center"></i>
+              <span class="font-medium text-slate-200">Blocked Handles</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+          </button>
+
+          <!-- Muted Handles -->
+          <button onclick="openMutedModal()" class="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-volume-xmark text-slate-400 w-4 text-center"></i>
+              <span class="font-medium text-slate-200">Muted Handles</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+          </button>
+
+          <!-- Protect Policy -->
+          <button onclick="showToast('Viewing Protect Policy')" class="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-shield-cat text-emerald-400 w-4 text-center"></i>
+              <span class="font-medium text-slate-200">Protect Policy & Anti-Kito Laws</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+          </button>
+
+          <!-- Terms of Use -->
+          <button onclick="showToast('Viewing Terms of Use')" class="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-file-contract text-slate-400 w-4 text-center"></i>
+              <span class="font-medium text-slate-200">Terms of Use</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+          </button>
+
+          <!-- Privacy Policy -->
+          <button onclick="showToast('Viewing Privacy Policy')" class="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-user-lock text-sky-400 w-4 text-center"></i>
+              <span class="font-medium text-slate-200">Privacy Policy</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+          </button>
+
+          <!-- Cookie Settings -->
+          <button onclick="showToast('Viewing Cookie Preferences')" class="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 transition-colors text-left">
+            <div class="flex items-center space-x-3">
+              <i class="fa-solid fa-cookie-bite text-amber-500 w-4 text-center"></i>
+              <span class="font-medium text-slate-200">Cookies & Storage</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+          </button>
+
+          <!-- Auth Action: Log In / Register or Log Out -->
+          <button id="authActionButton" onclick="handleAuthAction()" class="w-full p-3.5 flex items-center justify-between hover:bg-indigo-500/10 transition-colors text-left group">
+            <div class="flex items-center space-x-3">
+              <i id="authActionIcon" class="fa-solid fa-right-to-bracket text-indigo-400 w-4 text-center"></i>
+              <span id="authActionLabel" class="font-bold text-indigo-400">Log In / Register</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-indigo-400/60 text-[10px]"></i>
+          </button>
+
+        </div>
+
+      </main>
+
+      <!-- Bottom Navigation Bar -->
+      <footer class="flex-shrink-0 bg-slate-900 border-t border-slate-800 px-6 py-2.5 flex items-center justify-between select-none z-30 shadow-lg">
+        <a href="index.html" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+          <i class="fa-solid fa-compass text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Discover</span>
+        </a>
+        <a href="protectme.html" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+          <i class="fa-solid fa-shield-halved text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Protect Me</span>
+        </a>
+        <a href="threads.html" class="flex flex-col items-center text-slate-500 hover:text-slate-300 transition-colors">
+          <i class="fa-solid fa-message text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Chats</span>
+        </a>
+        <a href="#" class="flex flex-col items-center text-indigo-400 transition-colors">
+          <i class="fa-solid fa-user text-lg"></i>
+          <span class="text-[10px] font-medium mt-0.5">Profile</span>
+        </a>
+      </footer>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- EDIT PROFILE MODAL                                                -->
+    <!-- ================================================================= -->
+    <div id="editProfileModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h3 class="text-sm font-bold text-slate-100">Edit Profile Info</h3>
+          <button onclick="closeEditProfileModal()" class="text-slate-400 hover:text-white text-xs">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Handle Username (Editable every 60 days)</label>
+            <input type="text" id="editHandleInput" placeholder="@handle" class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2.5 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Display Name</label>
+            <input type="text" id="editNameInput" placeholder="Display Name" class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2.5 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Email Address (Read Only)</label>
+            <input type="email" id="editEmailInput" disabled class="w-full bg-slate-900 text-slate-500 text-xs px-3 py-2.5 rounded-xl border border-slate-800 cursor-not-allowed" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Phone Number</label>
+            <input type="tel" id="editPhoneInput" placeholder="+234..." class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2.5 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">State</label>
+              <input type="text" id="editStateInput" placeholder="State" class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Local Govt. Area</label>
+              <input type="text" id="editLgaInput" placeholder="LGA" class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <button onclick="saveProfileInfo()" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs rounded-xl shadow-md">
+          Save Changes
+        </button>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- VERIFICATION BOTTOM-SHEET MODAL                                   -->
+    <!-- ================================================================= -->
+    <div id="verificationModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end">
+      <div class="w-full bg-slate-900 border-t border-x border-slate-800 rounded-t-[32px] p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto hide-scrollbar">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-100">Account Identity Verification</h3>
+            <p class="text-[10px] text-slate-400">Verify your account to start meeting people securely</p>
+          </div>
+          <button onclick="closeVerificationModal()" class="text-slate-400 hover:text-white text-xs w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Verification Fee & Balance Warning Banner -->
+        <div class="bg-indigo-950/60 border border-indigo-500/30 rounded-2xl p-3 text-xs space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-indigo-300">Verification Processing Fee:</span>
+            <span class="font-mono font-bold text-amber-400">500 PTS</span>
+          </div>
+          <p class="text-[11px] text-slate-300">
+            Account verification costs <strong class="text-amber-400">500 points</strong>. If your balance is low, please <button onclick="closeVerificationModal(); openAddBalanceModal();" class="text-indigo-400 underline font-bold hover:text-indigo-300">top up your account</button> before submitting.
+          </p>
+        </div>
+
+        <!-- Benefits of Verification (Motivating & Professional) -->
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3 text-xs">
+          <h4 class="font-bold text-indigo-400 uppercase text-[10px] tracking-wider flex items-center space-x-1.5 border-b border-slate-800 pb-2">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Why You Should Verify Your Account Today</span>
+          </h4>
+
+          <div class="space-y-3 text-slate-300 text-[11px] leading-relaxed">
+            
+            <div class="flex items-start space-x-2.5">
+              <div class="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex-shrink-0 flex items-center justify-center text-[10px] mt-0.5">
+                <i class="fa-solid fa-gift"></i>
+              </div>
+              <div>
+                <strong class="text-emerald-400 font-bold block">1. Instant +100 Connection Points Bonus</strong>
+                <p class="text-slate-300">Upon successful verification, you receive <strong class="text-white">+100 bonus connection points</strong> credited straight to your balance. These points allow you to immediately start reaching out and connecting with verified members. <span class="text-amber-400 font-semibold">Unverified profiles do not qualify for this bonus.</span></p>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-2.5">
+              <div class="w-6 h-6 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex-shrink-0 flex items-center justify-center text-[10px] mt-0.5">
+                <i class="fa-solid fa-user-shield"></i>
+              </div>
+              <div>
+                <strong class="text-slate-100 font-bold block">2. Complete Anti-Kito Protection & Guarantee</strong>
+                <p class="text-slate-300">Verification officially registers you under our active safety network. In any emergency during a meet-up, our automated protocol instantly dispatches high-priority emergency alerts to your designated contacts, while our response team collaborates with law enforcement to track predators and bring them to justice. That is our ironclad commitment.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-2.5">
+              <div class="w-6 h-6 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 flex-shrink-0 flex items-center justify-center text-[10px] mt-0.5">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+              <div>
+                <strong class="text-slate-100 font-bold block">3. Trusted Community Status</strong>
+                <p class="text-slate-300">A verified check badge demonstrates authenticity, eliminating safety fears for anyone meeting you. Members are strongly advised never to meet unverified accounts; for your safety, non-verified profiles do not qualify for emergency intervention.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-2.5">
+              <div class="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex-shrink-0 flex items-center justify-center text-[10px] mt-0.5">
+                <i class="fa-solid fa-hand-holding-hand"></i>
+              </div>
+              <div>
+                <strong class="text-slate-100 font-bold block">4. Strengthen Our Collective Safe Haven</strong>
+                <p class="text-slate-300">Navigating identity in Nigeria requires collective solidarity. By verifying, you directly reinforce a safer, accountable, and interconnected community designed to safeguard all our members.</p>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="pt-2.5 border-t border-slate-800 text-[10px] text-amber-400/90 font-medium flex items-center space-x-1.5">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>By proceeding, you confirm that you have read and agreed to our Anti-Kito Protection Policy.</span>
+          </div>
+        </div>
+
+        <form id="verificationForm" onsubmit="submitVerification(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Full Real Name</label>
+            <input type="text" id="verifyFullName" required placeholder="Enter your full legal name" class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+            <p class="text-[9px] text-rose-400 mt-1">Providing incorrect legal details will lead to account suspension.</p>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Verification Document Type</label>
+            <select id="verifyDocType" required class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none">
+              <option value="">Select Document</option>
+              <option value="NIN">NIN (National Identity Number)</option>
+              <option value="DriversLicense">Driver's License</option>
+              <option value="VotersCard">Voter's Card</option>
+              <option value="Passport">International Passport / Document</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Upload Document Image</label>
+            <input type="file" id="verifyDocFile" required accept="image/*" class="w-full bg-slate-950 text-slate-400 text-xs px-2 py-1.5 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:bg-indigo-600 file:text-white" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Selfie Verification</label>
+            <input type="file" id="verifySelfieFile" required accept="image/*" class="w-full bg-slate-950 text-slate-400 text-xs px-2 py-1.5 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:bg-indigo-600 file:text-white" />
+            <p class="text-[9px] text-indigo-300 mt-1">Take a selfie holding a paper saying: <strong class="text-white">"verify me Gboi team"</strong></p>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Email Address</label>
+            <input type="email" id="verifyEmail" required placeholder="example@mail.com" class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Phone Number</label>
+            <input type="tel" id="verifyPhone" required placeholder="+234..." class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" />
+          </div>
+
+          <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md mt-2">
+            Submit Verification (500 PTS)
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- BLOCKED USERS BOTTOM-SHEET MODAL                                  -->
+    <!-- ================================================================= -->
+    <div id="blockedModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end">
+      <div class="w-full bg-slate-900 border-t border-x border-slate-800 rounded-t-[32px] p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto hide-scrollbar">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-100">Blocked Handles</h3>
+            <p class="text-[10px] text-slate-400">Manage users you have blocked from threads</p>
+          </div>
+          <button onclick="closeBlockedModal()" class="text-slate-400 hover:text-white text-xs w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div id="blockedUsersListModal" class="space-y-2 text-xs max-h-60 overflow-y-auto pr-1">
+          <p class="text-slate-500 text-[11px] py-4 text-center">Loading blocked users...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MUTED USERS BOTTOM-SHEET MODAL                                    -->
+    <!-- ================================================================= -->
+    <div id="mutedModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end">
+      <div class="w-full bg-slate-900 border-t border-x border-slate-800 rounded-t-[32px] p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto hide-scrollbar">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-100">Muted Handles</h3>
+            <p class="text-[10px] text-slate-400">Manage users whose notifications are muted</p>
+          </div>
+          <button onclick="closeMutedModal()" class="text-slate-400 hover:text-white text-xs w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div id="mutedUsersListModal" class="space-y-2 text-xs max-h-60 overflow-y-auto pr-1">
+          <p class="text-slate-500 text-[11px] py-4 text-center">Loading muted users...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- ADD BALANCE / TOP UP MODAL                                        -->
+    <!-- ================================================================= -->
+    <div id="addBalanceModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h3 class="text-sm font-bold text-slate-100">Top Up Profile Points</h3>
+          <button onclick="closeAddBalanceModal()" class="text-slate-400 hover:text-white text-xs">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">How much do you want to pay? (₦)</label>
+            <input 
+              type="number" 
+              id="payAmountInput" 
+              min="250" 
+              placeholder="Minimum 250 Naira" 
+              oninput="calculatePoints()" 
+              class="w-full bg-slate-950 text-slate-100 text-xs px-3 py-2.5 rounded-xl border border-slate-800 focus:border-indigo-500 focus:outline-none" 
+            />
+            <p id="amountError" class="text-[10px] text-rose-400 mt-1 hidden">Minimum payment is 250 Naira</p>
+          </div>
+
+          <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">Rate:</span>
+              <span class="text-slate-200 font-medium">5 Naira = 1 Point</span>
+            </div>
+            <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-800">
+              <span class="text-slate-400">Estimated Points:</span>
+              <span id="estimatedPoints" class="font-bold text-emerald-400 font-mono text-sm">0 PTS</span>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="payWithFlutterwave()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md">
+          Pay with Flutterwave
+        </button>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- DURESS PIN SETUP MODAL                                           -->
+    <!-- ================================================================= -->
+    <div id="duressPinModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h3 class="text-sm font-bold text-slate-100">Setup Duress Safety PIN</h3>
+          <button onclick="closeDuressPinModal()" class="text-slate-400 hover:text-white text-xs">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <p class="text-xs text-slate-300 leading-relaxed">
+          If forced to enter a PIN to deactivate Protect Me, entering this code will fake a successful cancel while silently sending emergency alerts to your contacts.
+        </p>
+
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Enter 6-Digit Duress PIN</label>
+          <input type="password" id="duressPinInput" maxlength="6" placeholder="••••••" class="w-full bg-slate-950 text-slate-100 text-center text-lg font-mono tracking-widest py-2.5 rounded-xl border border-slate-800 focus:border-rose-500 focus:outline-none" />
+        </div>
+
+        <button onclick="saveDuressPin()" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-md">
+          Save Duress Code
+        </button>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- IN-APP CONFIRMATION MODAL                                         -->
+    <!-- ================================================================= -->
+    <div id="customConfirmModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 text-center">
+        <div class="w-10 h-10 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto text-base">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h4 id="confirmModalTitle" class="text-sm font-bold text-slate-100">Are you sure?</h4>
+          <p id="confirmModalText" class="text-xs text-slate-400 mt-1">This action cannot be undone.</p>
+        </div>
+        <div class="flex items-center space-x-2 pt-2">
+          <button onclick="closeConfirmModal(false)" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl">Cancel</button>
+          <button id="confirmModalBtn" onclick="closeConfirmModal(true)" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastNotification" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-slate-100 text-xs px-4 py-2 rounded-full border border-slate-700 shadow-xl opacity-0 pointer-events-none transition-all duration-300">
+      Notification text
+    </div>
+
+  </div>
+
+  <!-- JavaScript Integration -->
+  <script>
+    // Initialize Supabase Client
+    const SUPABASE_URL = 'https://djryydilgqntazeibxch.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_Gu2BJqoYClKbb9xgqJuHuw_MtPk2d5I';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Flutterwave Live Public Key
+    const FLW_PUBLIC_KEY = "FLWPUBK-55e5d0e754e7da9baacac6e2cb4e04ac-X";
+
+    let currentUser = null;
+    let userProfile = null;
+    let confirmCallback = null;
+
+    // Atmospheric Weather / Season Themes Cycle List
+    const APP_THEMES = [
+      { id: 'twilight', name: 'Twilight Aurora' },
+      { id: 'autumn', name: 'Autumn Dusk' },
+      { id: 'pine-forest', name: 'Misty Pine Forest' },
+      { id: 'desert-sunset', name: 'Desert Sunset' },
+      { id: 'arctic', name: 'Arctic Polar Night' },
+      { id: 'monsoon', name: 'Monsoon Rain & Clay' }
+    ];
+
+    let currentThemeIndex = 0;
+
+    // One-Tap Theme Switching Function
+    function cycleTheme() {
+      currentThemeIndex = (currentThemeIndex + 1) % APP_THEMES.length;
+      const nextTheme = APP_THEMES[currentThemeIndex];
+
+      document.documentElement.setAttribute('data-theme', nextTheme.id);
+      localStorage.setItem('user-app-theme', nextTheme.id);
+
+      const labelEl = document.getElementById('currentThemeLabel');
+      if (labelEl) {
+        labelEl.innerText = nextTheme.name;
+      }
+
+      showToast(`Atmosphere: ${nextTheme.name}`);
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 1. Initialize Active Theme from localStorage
+      const savedThemeId = localStorage.getItem('user-app-theme') || 'twilight';
+      const foundIndex = APP_THEMES.findIndex(t => t.id === savedThemeId);
+      currentThemeIndex = foundIndex !== -1 ? foundIndex : 0;
+      const activeTheme = APP_THEMES[currentThemeIndex];
+
+      document.documentElement.setAttribute('data-theme', activeTheme.id);
+      const labelEl = document.getElementById('currentThemeLabel');
+      if (labelEl) labelEl.innerText = activeTheme.name;
+
+      // 2. Default immediately to guest mode to avoid flash of "Log Out"
+      renderGuestProfile();
+      await initPageSession();
+    });
+
+    async function initPageSession() {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      const user = session?.user;
+
+      if (error || !user) {
+        // --- GUEST MODE / NOT LOGGED IN ---
+        currentUser = null;
+        userProfile = null;
+        renderGuestProfile();
+        return;
+      }
+
+      // --- AUTHENTICATED MODE ---
+      currentUser = user;
+      document.getElementById('guestBadge').classList.add('hidden');
+      document.getElementById('authHeaderActions').innerHTML = `
+        <button onclick="handleAuthAction()" class="text-[10px] bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold px-3 py-1 rounded-full shadow hover:bg-rose-500/20 transition-all">
+          Log Out
+        </button>
+      `;
+      document.getElementById('authActionLabel').innerText = 'Log Out';
+      document.getElementById('authActionLabel').className = 'font-bold text-rose-400';
+      document.getElementById('authActionIcon').className = 'fa-solid fa-right-from-bracket text-rose-400 w-4 text-center';
+
+      await loadUserData();
+      await fetchUsageHistory();
+      await checkVerificationStatus();
+    }
+
+    function renderGuestProfile() {
+      document.getElementById('guestBadge').classList.remove('hidden');
+      document.getElementById('authHeaderActions').innerHTML = `
+        <button onclick="window.location.href='auth.html'" class="text-[10px] bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-1 rounded-full shadow">
+          Log In
+        </button>
+      `;
+
+      document.getElementById('userHandle').innerText = '@guest_user';
+      document.getElementById('userName').innerText = 'Guest Visitor';
+      document.getElementById('userLocation').innerText = 'Visitor Account';
+      document.getElementById('pointBalance').innerText = '0';
+      document.getElementById('verifiedBadge').classList.add('hidden');
+
+      document.getElementById('authActionLabel').innerText = 'Log In / Register';
+      document.getElementById('authActionLabel').className = 'font-bold text-indigo-400';
+      document.getElementById('authActionIcon').className = 'fa-solid fa-right-to-bracket text-indigo-400 w-4 text-center';
+
+      const container = document.getElementById('usageHistoryList');
+      container.innerHTML = `
+        <div class="text-center py-3 space-y-1">
+          <p class="text-slate-400 text-xs font-medium">Viewing in Guest Preview Mode</p>
+          <button onclick="window.location.href='auth.html'" class="text-[10px] text-indigo-400 underline font-bold hover:text-indigo-300">
+            Log in to view live balance & transactions
+          </button>
+        </div>
+      `;
+    }
+
+    function promptGuestLogin() {
+      window.location.href = 'auth.html';
+    }
+
+    function isGuest() {
+      return !currentUser;
+    }
+
+    async function loadUserData() {
+      if (isGuest()) return;
+
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (profile) {
+        userProfile = profile;
+        document.getElementById('userHandle').innerText = profile.handle ? `@${profile.handle}` : '@username';
+        document.getElementById('userName').innerText = profile.full_name || 'User Profile';
+        document.getElementById('userLocation').innerText = profile.lga || profile.state ? `${profile.lga || ''}, ${profile.state || ''}` : 'Location Not Set';
+        document.getElementById('pointBalance').innerText = (profile.points || 0).toLocaleString();
+        if (profile.avatar_url) document.getElementById('userAvatar').src = profile.avatar_url;
+
+        document.getElementById('editHandleInput').value = profile.handle || '';
+        document.getElementById('editNameInput').value = profile.full_name || '';
+        document.getElementById('editEmailInput').value = profile.email || currentUser.email;
+        document.getElementById('editPhoneInput').value = profile.phone || '';
+        document.getElementById('editStateInput').value = profile.state || '';
+        document.getElementById('editLgaInput').value = profile.lga || '';
+        if (profile.fake_deactivation_pin) {
+          document.getElementById('duressPinInput').value = profile.fake_deactivation_pin;
+        }
+      }
+    }
+
+    function triggerAvatarUpload() {
+      if (isGuest()) return promptGuestLogin();
+      document.getElementById('avatarFileInput').click();
+    }
+
+    async function uploadAvatar(event) {
+      if (isGuest()) return promptGuestLogin();
+      const file = event.target.files[0];
+      if (!file || !userProfile) return;
+
+      const filePath = `${currentUser.id}/${Date.now()}_${file.name}`;
+      const { error: uploadErr } = await supabaseClient.storage.from('avatars').upload(filePath, file);
+      if (uploadErr) {
+        showToast('Avatar upload failed');
+        return;
+      }
+
+      const avatarUrl = supabaseClient.storage.from('avatars').getPublicUrl(filePath).data.publicUrl;
+
+      await supabaseClient.from('profiles').update({
+        avatar_url: avatarUrl
+      }).eq('id', currentUser.id);
+
+      document.getElementById('userAvatar').src = avatarUrl;
+      showToast('Avatar updated successfully');
+      loadUserData();
+    }
+
+    async function saveProfileInfo() {
+      if (isGuest()) return promptGuestLogin();
+      if (!userProfile) return;
+
+      const handle = document.getElementById('editHandleInput').value.trim().replace(/^@/, '');
+      const fullName = document.getElementById('editNameInput').value.trim();
+      const phone = document.getElementById('editPhoneInput').value.trim();
+      const state = document.getElementById('editStateInput').value.trim();
+      const lga = document.getElementById('editLgaInput').value.trim();
+
+      const updatePayload = {
+        handle: handle,
+        full_name: fullName,
+        phone: phone,
+        state: state,
+        lga: lga,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabaseClient.from('profiles').update(updatePayload).eq('id', currentUser.id);
+      if (error) {
+        showToast('Error updating profile');
+      } else {
+        closeEditProfileModal();
+        showToast('Profile updated successfully');
+        loadUserData();
+      }
+    }
+
+    async function checkVerificationStatus() {
+      if (isGuest()) return;
+      const { data: ver } = await supabaseClient.from('verifications').select('*').eq('user_id', currentUser.id).single();
+
+      if (ver) {
+        if (ver.status === 'verified') {
+          document.getElementById('verifiedBadge').classList.remove('hidden');
+          document.getElementById('verifyTitle').innerText = 'Account Identity Verified';
+          document.getElementById('verifySubtext').innerText = 'Official identity badge active • Protection active';
+          document.getElementById('verifyBtn').innerText = 'Verified';
+          document.getElementById('verifyBtn').disabled = true;
+          document.getElementById('verificationStatusCard').className = "bg-slate-950/80 border border-emerald-500/30 rounded-3xl p-3.5 flex items-center justify-between text-xs shadow-md";
+          document.getElementById('verifyIconContainer').className = "w-8 h-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-sm";
+          document.getElementById('verifyIcon').className = "fa-solid fa-circle-check";
+        } else if (ver.status === 'rejected') {
+          document.getElementById('verifyTitle').innerText = 'Verification Rejected';
+          document.getElementById('verifySubtext').innerText = ver.rejection_reason || 'Please re-upload credentials';
+          document.getElementById('verifyBtn').innerText = 'Retry';
+          document.getElementById('verificationStatusCard').className = "bg-slate-950/80 border border-rose-500/30 rounded-3xl p-3.5 flex items-center justify-between text-xs shadow-md";
+        } else {
+          document.getElementById('verifyTitle').innerText = 'Document Under Review';
+          document.getElementById('verifySubtext').innerText = 'Review in progress by admin team';
+          document.getElementById('verifyBtn').innerText = 'In Review';
+          document.getElementById('verifyBtn').disabled = true;
+        }
+      }
+    }
+
+    async function submitVerification(e) {
+      e.preventDefault();
+      if (isGuest()) return promptGuestLogin();
+      if (!userProfile) return;
+
+      const VERIFICATION_COST = 500;
+      const BONUS_POINTS = 100;
+      const currentPoints = userProfile.points || 0;
+
+      if (currentPoints < VERIFICATION_COST) {
+        showToast('Insufficient points. Verification costs 500 PTS. Please top up.');
+        closeVerificationModal();
+        openAddBalanceModal();
+        return;
+      }
+
+      const fullName = document.getElementById('verifyFullName').value;
+      const docType = document.getElementById('verifyDocType').value;
+      const docFile = document.getElementById('verifyDocFile').files[0];
+      const selfieFile = document.getElementById('verifySelfieFile').files[0];
+      const email = document.getElementById('verifyEmail').value;
+      const phone = document.getElementById('verifyPhone').value;
+
+      const docPath = `verifications/${currentUser.id}_doc_${Date.now()}`;
+      const selfiePath = `verifications/${currentUser.id}_selfie_${Date.now()}`;
+
+      await supabaseClient.storage.from('documents').upload(docPath, docFile);
+      await supabaseClient.storage.from('documents').upload(selfiePath, selfieFile);
+
+      const docUrl = supabaseClient.storage.from('documents').getPublicUrl(docPath).data.publicUrl;
+      const selfieUrl = supabaseClient.storage.from('documents').getPublicUrl(selfiePath).data.publicUrl;
+
+      const netPoints = currentPoints - VERIFICATION_COST + BONUS_POINTS;
+      await supabaseClient.from('profiles').update({ points: netPoints }).eq('id', currentUser.id);
+
+      await supabaseClient.from('usage').insert({
+        user_id: currentUser.id,
+        metric_type: 'verification',
+        cost_naira: 0,
+        details: { points_deducted: VERIFICATION_COST, bonus_awarded: BONUS_POINTS, description: 'Identity Verification Fee (-500 PTS) + Bonus (+100 PTS)' }
+      });
+
+      await supabaseClient.from('verifications').upsert({
+        user_id: currentUser.id,
+        full_name: fullName,
+        doc_type: docType,
+        doc_url: docUrl,
+        selfie_url: selfieUrl,
+        email: email,
+        phone: phone,
+        status: 'pending'
+      });
+
+      closeVerificationModal();
+      showToast('Verification submitted! +100 bonus points granted.');
+      await loadUserData();
+      await fetchUsageHistory();
+      await checkVerificationStatus();
+    }
+
+    async function openBlockedModal() {
+      if (isGuest()) return promptGuestLogin();
+      document.getElementById('blockedModal').classList.remove('hidden');
+      const { data: blocks } = await supabaseClient.from('blocked_users').select('*').eq('user_id', currentUser.id);
+      const list = document.getElementById('blockedUsersListModal');
+
+      if (!blocks || blocks.length === 0) {
+        list.innerHTML = '<p class="text-slate-500 text-[11px] py-4 text-center">No blocked users found.</p>';
+        return;
+      }
+
+      list.innerHTML = blocks.map(b => `
+        <div class="flex items-center justify-between py-2 border-b border-slate-800/60">
+          <span class="text-slate-300 font-medium">${b.blocked_user_id}</span>
+          <button onclick="promptUnblockUser('${b.id}')" class="text-[10px] bg-rose-500/20 text-rose-300 px-2.5 py-1 rounded-lg border border-rose-500/30 hover:bg-rose-500/30">Unblock</button>
+        </div>
+      `).join('');
+    }
+
+    function closeBlockedModal() {
+      document.getElementById('blockedModal').classList.add('hidden');
+    }
+
+    function promptUnblockUser(id) {
+      showCustomConfirm('Unblock User', 'Are you sure you want to unblock this user?', async () => {
+        await supabaseClient.from('blocked_users').delete().eq('id', id);
+        showToast('User unblocked');
+        openBlockedModal();
+      });
+    }
+
+    async function openMutedModal() {
+      if (isGuest()) return promptGuestLogin();
+      document.getElementById('mutedModal').classList.remove('hidden');
+      const { data: mutes } = await supabaseClient.from('muted_users').select('*').eq('user_id', currentUser.id);
+      const list = document.getElementById('mutedUsersListModal');
+
+      if (!mutes || mutes.length === 0) {
+        list.innerHTML = '<p class="text-slate-500 text-[11px] py-4 text-center">No muted users found.</p>';
+        return;
+      }
+
+      list.innerHTML = mutes.map(m => `
+        <div class="flex items-center justify-between py-2 border-b border-slate-800/60">
+          <span class="text-slate-300 font-medium">${m.muted_user_id}</span>
+          <button onclick="promptUnmuteUser('${m.id}')" class="text-[10px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 hover:text-white">Unmute</button>
+        </div>
+      `).join('');
+    }
+
+    function closeMutedModal() {
+      document.getElementById('mutedModal').classList.add('hidden');
+    }
+
+    function promptUnmuteUser(id) {
+      showCustomConfirm('Unmute User', 'Are you sure you want to unmute this user?', async () => {
+        await supabaseClient.from('muted_users').delete().eq('id', id);
+        showToast('User unmuted');
+        openMutedModal();
+      });
+    }
+
+    function payWithFlutterwave() {
+      if (isGuest()) return promptGuestLogin();
+      const amount = parseFloat(document.getElementById('payAmountInput').value) || 0;
+      if (amount < 250) {
+        showToast('Minimum top-up amount is 250 Naira');
+        return;
+      }
+
+      const pointsToAdd = Math.floor(amount / 5);
+
+      FlutterwaveCheckout({
+        public_key: FLW_PUBLIC_KEY,
+        tx_ref: "TX_" + Date.now(),
+        amount: amount,
+        currency: "NGN",
+        payment_options: "card, mobilemoney, ussd",
+        customer: {
+          email: currentUser?.email || "user@example.com",
+          phone_number: userProfile?.phone || "08000000000",
+          name: userProfile?.full_name || "App User",
+        },
+        customizations: {
+          title: "Profile Points Top-Up",
+          description: `Purchase ${pointsToAdd} PTS`,
+          logo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+        },
+        callback: async function (data) {
+          if (data.status === "successful") {
+            const newPoints = (userProfile?.points || 0) + pointsToAdd;
+            await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', currentUser.id);
+
+            await supabaseClient.from('usage').insert({
+              user_id: currentUser.id,
+              metric_type: 'topup',
+              cost_naira: amount,
+              details: { points_added: pointsToAdd, tx_ref: data.tx_ref }
+            });
+
+            closeAddBalanceModal();
+            showToast(`Success! Payment confirmed. +${pointsToAdd} PTS added.`);
+            loadUserData();
+            fetchUsageHistory();
+          }
+        },
+        onclose: function() {
+          showToast('Payment window closed');
+        }
+      });
+    }
+
+    async function fetchUsageHistory() {
+      if (isGuest()) return;
+      const { data: usageLogs } = await supabaseClient.from('usage').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+
+      const container = document.getElementById('usageHistoryList');
+      if (!usageLogs || usageLogs.length === 0) {
+        container.innerHTML = '<p class="text-center text-slate-500 py-3">No activity logs found in database.</p>';
+        return;
+      }
+
+      container.innerHTML = usageLogs.map(item => {
+        const isTopup = item.metric_type === 'topup';
+        const isVerification = item.metric_type === 'verification';
+
+        let badgeClass = 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400';
+        let iconClass = 'fa-receipt';
+        let valueText = `₦${item.cost_naira}`;
+        let valueClass = 'text-slate-400';
+
+        if (isTopup) {
+          badgeClass = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+          iconClass = 'fa-arrow-down';
+          valueText = `+${item.details?.points_added || 0} PTS`;
+          valueClass = 'text-emerald-400';
+        } else if (isVerification) {
+          badgeClass = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
+          iconClass = 'fa-shield-halved';
+          valueText = `-400 PTS Net`;
+          valueClass = 'text-amber-400';
+        }
+
+        return `
+          <div class="flex items-center justify-between py-1.5 border-b border-slate-800/60">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-7 h-7 rounded-full ${badgeClass} border flex items-center justify-center text-xs">
+                <i class="fa-solid ${iconClass} text-[10px]"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-200 capitalize">${item.metric_type}</p>
+                <p class="text-[10px] text-slate-500">${new Date(item.created_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <span class="font-mono font-bold ${valueClass}">
+              ${valueText}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function promptResetProfile() {
+      if (isGuest()) return promptGuestLogin();
+      showCustomConfirm('Reset Profile Info', 'Are you sure you want to clear display name info?', () => {
+        document.getElementById('userName').innerText = 'User Profile';
+        showToast('Profile info reset');
+      });
+    }
+
+    function handleAuthAction() {
+      if (isGuest()) {
+        window.location.href = 'auth.html';
+      } else {
+        showCustomConfirm('Log Out', 'Are you sure you want to log out of your account?', async () => {
+          await supabaseClient.auth.signOut();
+          showToast('Logged out successfully');
+          await initPageSession();
+        });
+      }
+    }
+
+    function openVerificationModal() {
+      if (isGuest()) return promptGuestLogin();
+      document.getElementById('verificationModal').classList.remove('hidden');
+    }
+    function closeVerificationModal() { document.getElementById('verificationModal').classList.add('hidden'); }
+    
+    function openEditProfileModal() {
+      if (isGuest()) return promptGuestLogin();
+      document.getElementById('editProfileModal').classList.remove('hidden');
+    }
+    function closeEditProfileModal() { document.getElementById('editProfileModal').classList.add('hidden'); }
+    
+    function openAddBalanceModal() {
+      if (isGuest()) return promptGuestLogin();
+      document.getElementById('addBalanceModal').classList.remove('hidden');
+    }
+    function closeAddBalanceModal() { document.getElementById('addBalanceModal').classList.add('hidden'); }
+    
+    function openDuressPinModal() {
+      if (isGuest()) return promptGuestLogin();
+      document.getElementById('duressPinModal').classList.remove('hidden');
+    }
+    function closeDuressPinModal() { document.getElementById('duressPinModal').classList.add('hidden'); }
+
+    function showCustomConfirm(title, text, callback) {
+      document.getElementById('confirmModalTitle').innerText = title;
+      document.getElementById('confirmModalText').innerText = text;
+      confirmCallback = callback;
+      document.getElementById('customConfirmModal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal(isConfirmed) {
+      document.getElementById('customConfirmModal').classList.add('hidden');
+      if (isConfirmed && confirmCallback) {
+        confirmCallback();
+      }
+      confirmCallback = null;
+    }
+
+    function calculatePoints() {
+      const amount = parseFloat(document.getElementById('payAmountInput').value) || 0;
+      const errorElem = document.getElementById('amountError');
+      const pointsElem = document.getElementById('estimatedPoints');
+
+      if (amount > 0 && amount < 250) {
+        errorElem.classList.remove('hidden');
+      } else {
+        errorElem.classList.add('hidden');
+      }
+
+      pointsElem.innerText = `${Math.floor(amount / 5).toLocaleString()} PTS`;
+    }
+
+    async function saveDuressPin() {
+      if (isGuest()) return promptGuestLogin();
+      const pin = document.getElementById('duressPinInput').value.trim();
+
+      if (pin.length !== 6) {
+        showToast('Duress PIN must be exactly 6 digits.');
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({ fake_deactivation_pin: pin })
+        .eq('id', currentUser.id);
+
+      if (error) {
+        showToast('Error saving Duress PIN');
+      } else {
+        closeDuressPinModal();
+        showToast('Duress Safety PIN saved successfully');
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      toast.innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
